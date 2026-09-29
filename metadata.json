@@ -1,0 +1,6 @@
+{
+  "name": "Feira Cultural Colégio Simetria - Estado de São Paulo",
+  "description": "Plataforma interativa e CMS completo da Feira Cultural do Colégio Simetria celebrando a cultura, história, gastronomia e turismo do Estado de São Paulo.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
