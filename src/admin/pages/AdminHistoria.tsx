@@ -26,7 +26,7 @@ export const AdminHistoria: React.FC = () => {
       descricao: editingItem.descricao || '',
       periodo: editingItem.periodo || 'Século XX',
       dataOuAno: editingItem.dataOuAno || '1900',
-      imagem: editingItem.imagem || '/src/assets/images/sp_hero_banner_1790701710531.jpg',
+      imagem: editingItem.imagem || '/images/sp_hero_banner_1790701710531.jpg',
       galeria: editingItem.galeria || [],
       curiosidade: editingItem.curiosidade || '',
       status: editingItem.status || 'PUBLICADO',
@@ -71,7 +71,7 @@ export const AdminHistoria: React.FC = () => {
               descricao: '',
               periodo: 'Século XX',
               dataOuAno: '1932',
-              imagem: '/src/assets/images/sp_hero_banner_1790701710531.jpg',
+              imagem: '/images/sp_hero_banner_1790701710531.jpg',
               curiosidade: '',
               status: 'PUBLICADO'
             })

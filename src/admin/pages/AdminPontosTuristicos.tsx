@@ -41,7 +41,7 @@ export const AdminPontosTuristicos: React.FC = () => {
       cidadeNome: city?.titulo || 'São Paulo',
       regiaoNome: city?.regiaoNome || 'Capital',
       categoria: editingItem.categoria || 'Turismo',
-      imagemPrincipal: editingItem.imagemPrincipal || '/src/assets/images/sp_hero_banner_1790701710531.jpg',
+      imagemPrincipal: editingItem.imagemPrincipal || '/images/sp_hero_banner_1790701710531.jpg',
       galeria: editingItem.galeria || [],
       historia: editingItem.historia || '',
       curiosidade: editingItem.curiosidade || '',
@@ -82,7 +82,7 @@ export const AdminPontosTuristicos: React.FC = () => {
               descricao: '',
               cidadeId: cidades[0]?.id || 'cid_1',
               categoria: 'Turismo',
-              imagemPrincipal: '/src/assets/images/sp_hero_banner_1790701710531.jpg',
+              imagemPrincipal: '/images/sp_hero_banner_1790701710531.jpg',
               status: 'PUBLICADO'
             })
           }

@@ -21,7 +21,7 @@ export const AdminBanners: React.FC = () => {
       id: editingItem.id || 'b_' + Date.now(),
       titulo: editingItem.titulo,
       subtitulo: editingItem.subtitulo || '',
-      imagem: editingItem.imagem || '/src/assets/images/sp_hero_banner_1790701710531.jpg',
+      imagem: editingItem.imagem || '/images/sp_hero_banner_1790701710531.jpg',
       botaoTexto: editingItem.botaoTexto || 'EXPLORAR',
       botaoLink: editingItem.botaoLink || '#mapa',
       status: editingItem.status || 'PUBLICADO',
@@ -49,7 +49,7 @@ export const AdminBanners: React.FC = () => {
             setEditingItem({
               titulo: '',
               subtitulo: '',
-              imagem: '/src/assets/images/sp_hero_banner_1790701710531.jpg',
+              imagem: '/images/sp_hero_banner_1790701710531.jpg',
               botaoTexto: 'EXPLORAR',
               botaoLink: '#mapa',
               status: 'PUBLICADO'

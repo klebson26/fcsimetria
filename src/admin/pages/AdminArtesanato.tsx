@@ -24,7 +24,7 @@ export const AdminArtesanato: React.FC = () => {
       id: editingItem.id || 'art_' + Date.now(),
       titulo: editingItem.titulo,
       descricao: editingItem.descricao || '',
-      imagem: editingItem.imagem || '/src/assets/images/sp_hero_banner_1790701710531.jpg',
+      imagem: editingItem.imagem || '/images/sp_hero_banner_1790701710531.jpg',
       galeria: editingItem.galeria || [],
       cidade: editingItem.cidade || 'São Paulo',
       regiao: editingItem.regiao || 'Vale do Paraíba',
@@ -76,7 +76,7 @@ export const AdminArtesanato: React.FC = () => {
               regiao: 'Vale do Paraíba',
               material: 'Cerâmica Noborigama',
               categoria: 'Cerâmica',
-              imagem: '/src/assets/images/sp_hero_banner_1790701710531.jpg',
+              imagem: '/images/sp_hero_banner_1790701710531.jpg',
               status: 'PUBLICADO',
               historia: '',
               curiosidade: ''

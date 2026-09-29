@@ -24,7 +24,7 @@ export const AdminCultura: React.FC = () => {
       id: editingItem.id || 'cult_' + Date.now(),
       titulo: editingItem.titulo,
       descricao: editingItem.descricao || '',
-      imagem: editingItem.imagem || '/src/assets/images/sp_hero_banner_1790701710531.jpg',
+      imagem: editingItem.imagem || '/images/sp_hero_banner_1790701710531.jpg',
       galeria: editingItem.galeria || [],
       cidadeOuRegiao: editingItem.cidadeOuRegiao || 'Todo o Estado de SP',
       categoria: (editingItem.categoria as any) || 'manifestações culturais',
@@ -71,7 +71,7 @@ export const AdminCultura: React.FC = () => {
               descricao: '',
               cidadeOuRegiao: 'Interior e Vale do Paraíba',
               categoria: 'cultura caipira',
-              imagem: '/src/assets/images/sp_hero_banner_1790701710531.jpg',
+              imagem: '/images/sp_hero_banner_1790701710531.jpg',
               destaque: 'Patrimônio Imaterial Paulista',
               status: 'PUBLICADO'
             })

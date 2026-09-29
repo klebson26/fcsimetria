@@ -33,7 +33,7 @@ export const AdminMercadao: React.FC = () => {
       titulo: editingItem.titulo,
       descricao: editingItem.descricao || '',
       categoria: editingItem.categoria || 'Produtos regionais',
-      imagem: editingItem.imagem || '/src/assets/images/mercadao_sp_1790701738265.jpg',
+      imagem: editingItem.imagem || '/images/mercadao_sp_1790701738265.jpg',
       curiosidade: editingItem.curiosidade || '',
       origem: editingItem.origem || 'Mercadão de SP',
       utilizacao: editingItem.utilizacao || '',
@@ -71,7 +71,7 @@ export const AdminMercadao: React.FC = () => {
               titulo: '',
               descricao: '',
               categoria: 'Produtos regionais',
-              imagem: '/src/assets/images/mercadao_sp_1790701738265.jpg',
+              imagem: '/images/mercadao_sp_1790701738265.jpg',
               status: 'PUBLICADO'
             })
           }

@@ -110,7 +110,7 @@ export const FairModeModal: React.FC<FairModeModalProps> = ({ onClose }) => {
         titulo: c.pergunta,
         subtitulo: c.cidadeOuRegiao,
         descricao: c.resposta,
-        imagem: c.imagem || '/src/assets/images/sp_hero_banner_1790701710531.jpg',
+        imagem: c.imagem || '/images/sp_hero_banner_1790701710531.jpg',
         badge: c.categoria
       });
     });

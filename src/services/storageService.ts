@@ -90,6 +90,11 @@ function getItem<T>(key: string, defaultValue: T): T {
       localStorage.setItem(key, JSON.stringify(defaultValue));
       return defaultValue;
     }
+    if (data.includes('/src/assets/images/')) {
+      const sanitized = data.replaceAll('/src/assets/images/', '/images/');
+      localStorage.setItem(key, sanitized);
+      return JSON.parse(sanitized) as T;
+    }
     return JSON.parse(data) as T;
   } catch (err) {
     console.error(`Error reading ${key} from localStorage:`, err);

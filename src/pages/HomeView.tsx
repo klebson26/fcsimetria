@@ -104,7 +104,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
         <section className="relative overflow-hidden rounded-3xl border border-slate-800 bg-slate-900 shadow-2xl">
           <div className="absolute inset-0 z-0">
             <img
-              src="/src/assets/images/sp_hero_banner_1790701710531.jpg"
+              src="/images/sp_hero_banner_1790701710531.jpg"
               alt="São Paulo Hero"
               className="h-full w-full object-cover opacity-40 blur-[2px] scale-105"
             />
@@ -250,7 +250,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
                 <div className="space-y-3">
                   <div className="h-44 w-full overflow-hidden rounded-2xl bg-slate-950 border border-slate-800">
                     <img
-                      src={mercadao[0]?.imagem || '/src/assets/images/mercadao_sp_1790701738265.jpg'}
+                      src={mercadao[0]?.imagem || '/images/mercadao_sp_1790701738265.jpg'}
                       alt="Mercadão de São Paulo"
                       className="h-full w-full object-cover group-hover:scale-105 transition duration-500"
                     />
@@ -664,7 +664,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
             <div className="lg:col-span-5 flex justify-center">
               <div className="relative h-80 sm:h-96 w-full rounded-2xl overflow-hidden border border-amber-500/30 shadow-2xl">
                 <img
-                  src={publishedMercadao[0]?.imagem || '/src/assets/images/mercadao_sp_1790701738265.jpg'}
+                  src={publishedMercadao[0]?.imagem || '/images/mercadao_sp_1790701738265.jpg'}
                   alt="Mercadão de São Paulo"
                   className="h-full w-full object-cover"
                 />

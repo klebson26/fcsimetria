@@ -32,7 +32,7 @@ export const AdminCulinaria: React.FC = () => {
       id: editingItem.id || 'cul_' + Date.now(),
       titulo: editingItem.titulo,
       descricao: editingItem.descricao || '',
-      imagemPrincipal: editingItem.imagemPrincipal || '/src/assets/images/sp_hero_banner_1790701710531.jpg',
+      imagemPrincipal: editingItem.imagemPrincipal || '/images/sp_hero_banner_1790701710531.jpg',
       galeria: editingItem.galeria || [],
       historia: editingItem.historia || '',
       ingredientes: editingItem.ingredientes || [],
@@ -76,7 +76,7 @@ export const AdminCulinaria: React.FC = () => {
               descricao: '',
               categoria: 'Comida tradicional',
               cidadeOuRegiao: 'São Paulo',
-              imagemPrincipal: '/src/assets/images/sp_hero_banner_1790701710531.jpg',
+              imagemPrincipal: '/images/sp_hero_banner_1790701710531.jpg',
               status: 'PUBLICADO'
             })
           }

@@ -251,7 +251,7 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({
             {mapMode === 'RELEVO' && (
               <div className="absolute inset-0 h-full w-full">
                 <img
-                  src="/src/assets/images/mapa_estado_sp_geografico_1790705536183.jpg"
+                  src="/images/mapa_estado_sp_geografico_1790705536183.jpg"
                   alt="Mapa Geográfico do Estado de São Paulo"
                   className="h-full w-full object-cover object-center"
                 />
@@ -263,7 +263,7 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({
             {mapMode === 'SATELLITE' && (
               <div className="absolute inset-0 h-full w-full">
                 <img
-                  src="/src/assets/images/mapa_sp_topografico_vetor_1790705555599.jpg"
+                  src="/images/mapa_sp_topografico_vetor_1790705555599.jpg"
                   alt="Mapa Topográfico Satélite"
                   className="h-full w-full object-cover object-center"
                 />
