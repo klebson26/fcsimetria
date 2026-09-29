@@ -98,8 +98,10 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
     <div className="flex flex-col h-full bg-slate-950 text-slate-300 border-r border-slate-800 w-64 shrink-0">
       {/* Brand Header */}
       <div className="flex h-16 items-center justify-between px-6 border-b border-slate-800">
-        <span className="font-serif text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
-          <ShieldCheck className="h-5 w-5 text-amber-400" />
+        <span className="font-serif text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2.5">
+          <div className="h-7 w-7 overflow-hidden rounded-full border border-amber-500/40 p-0.5 bg-slate-900 shrink-0">
+            <img src="/logo-simetria.jpg" alt="Simetria" className="h-full w-full object-contain rounded-full" />
+          </div>
           SIMETRIA CMS
         </span>
         {isOpenMobile && (

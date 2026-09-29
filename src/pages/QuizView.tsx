@@ -219,7 +219,16 @@ export const QuizView: React.FC = () => {
               </div>
 
               <div className="py-6 space-y-3">
-                <Sparkles className="h-8 w-8 text-amber-400 mx-auto" />
+                <div className="h-16 w-16 mx-auto overflow-hidden rounded-full border-2 border-amber-500/60 shadow-xl shadow-amber-500/20 p-0.5 bg-slate-900">
+                  <img
+                    src={identidade.logoUrl || '/logo-simetria.jpg'}
+                    alt={identidade.nomeColegio}
+                    className="h-full w-full object-contain rounded-full"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).src = '/logo-simetria.jpg';
+                    }}
+                  />
+                </div>
                 <h4 className="font-serif text-2xl font-bold text-amber-300 uppercase tracking-wider">
                   CERTIFICADO DE CONHECIMENTO CULTURAL
                 </h4>

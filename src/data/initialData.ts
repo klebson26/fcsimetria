@@ -750,9 +750,9 @@ export const INITIAL_APARENCIA: ConfigAparencia = {
 
 export const INITIAL_IDENTIDADE: ConfigIdentidade = {
   nomeColegio: 'COLÉGIO SIMETRIA',
-  logoUrl: '/src/assets/images/simetria_logo_badge_1790701719844.jpg',
-  logoCarregamentoUrl: '/src/assets/images/simetria_logo_badge_1790701719844.jpg',
-  faviconUrl: '/src/assets/images/simetria_logo_badge_1790701719844.jpg',
+  logoUrl: '/logo-simetria.jpg',
+  logoCarregamentoUrl: '/logo-simetria.jpg',
+  faviconUrl: '/logo-simetria.jpg',
   nomeFeira: 'FEIRA CULTURAL 2026',
   anoFeira: '2026',
   tituloPrincipal: 'SÃO PAULO: CULTURA, HISTÓRIA E DIVERSIDADE',

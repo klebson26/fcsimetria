@@ -16,8 +16,15 @@ export const Footer: React.FC<FooterProps> = ({ onNavigateToAdmin }) => {
           {/* Col 1: Identity */}
           <div className="space-y-4 lg:col-span-2">
             <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-500/10 border border-amber-500/30">
-                <Sparkles className="h-5 w-5 text-amber-400" />
+              <div className="relative flex h-12 w-12 items-center justify-center overflow-hidden rounded-full bg-slate-950 p-0.5 border-2 border-amber-500/40 shadow-lg shadow-amber-500/10 shrink-0">
+                <img
+                  src={identidade.logoUrl || '/logo-simetria.jpg'}
+                  alt={identidade.nomeColegio}
+                  className="h-full w-full object-contain rounded-full"
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).src = '/logo-simetria.jpg';
+                  }}
+                />
               </div>
               <div>
                 <h3 className="font-serif text-lg font-bold text-white">

@@ -161,9 +161,16 @@ export const QRCodePrintModal: React.FC<QRCodePrintModalProps> = ({
         <div className="printable-stand-card mx-auto max-w-md rounded-2xl border-4 border-amber-500 bg-slate-950 p-6 sm:p-8 text-center shadow-2xl relative space-y-4 print:border-4 print:border-slate-900 print:bg-white print:text-slate-950 print:shadow-none print:m-0 print:max-w-none">
           {/* Top School Header */}
           <div className="flex items-center justify-between border-b border-amber-500/30 pb-3 print:border-slate-300">
-            <div className="flex items-center gap-2 text-left">
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-500 text-slate-950 font-bold text-xs">
-                CS
+            <div className="flex items-center gap-2.5 text-left">
+              <div className="h-10 w-10 overflow-hidden rounded-full bg-slate-900 border border-amber-500/50 p-0.5 shrink-0 print:border-slate-400">
+                <img
+                  src={identidade.logoUrl || '/logo-simetria.jpg'}
+                  alt={identidade.nomeColegio}
+                  className="h-full w-full object-contain rounded-full"
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).src = '/logo-simetria.jpg';
+                  }}
+                />
               </div>
               <div>
                 <span className="font-serif text-sm font-bold text-white print:text-slate-950 block">

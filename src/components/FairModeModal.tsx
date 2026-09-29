@@ -168,8 +168,8 @@ export const FairModeModal: React.FC<FairModeModalProps> = ({ onClose }) => {
       {/* Top Bar Controls */}
       <div className="flex h-16 items-center justify-between border-b border-slate-800/80 bg-slate-950/80 px-6 backdrop-blur-md">
         <div className="flex items-center gap-3">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-500 text-slate-950 font-bold">
-            <Compass className="h-5 w-5" />
+          <div className="h-9 w-9 overflow-hidden rounded-full border border-amber-500/50 p-0.5 bg-slate-900 shrink-0 shadow-md">
+            <img src="/logo-simetria.jpg" alt="Colégio Simetria" className="h-full w-full object-contain rounded-full" />
           </div>
           <div>
             <h3 className="font-serif text-sm font-bold text-white">

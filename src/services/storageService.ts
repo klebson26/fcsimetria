@@ -261,7 +261,14 @@ export function getAparencia(): ConfigAparencia {
 }
 
 export function getIdentidade(): ConfigIdentidade {
-  return getItem<ConfigIdentidade>(KEYS.IDENTIDADE, INITIAL_IDENTIDADE);
+  const current = getItem<ConfigIdentidade>(KEYS.IDENTIDADE, INITIAL_IDENTIDADE);
+  if (current.logoUrl && (current.logoUrl.includes('simetria_logo_badge_1790701719844') || !current.logoUrl.includes('logo-simetria'))) {
+    current.logoUrl = '/logo-simetria.jpg';
+    current.logoCarregamentoUrl = '/logo-simetria.jpg';
+    current.faviconUrl = '/logo-simetria.jpg';
+    setItem(KEYS.IDENTIDADE, current);
+  }
+  return current;
 }
 
 export function getModoFeira(): ConfigModoFeira {

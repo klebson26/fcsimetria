@@ -99,16 +99,15 @@ export const Header: React.FC<HeaderProps> = ({
             onClick={() => handleNavClick('/#')}
             className="flex items-center gap-3 transition hover:opacity-90"
           >
-            <div className="relative flex h-11 w-11 items-center justify-center overflow-hidden rounded-xl bg-gradient-to-br from-amber-500/20 via-blue-500/10 to-indigo-500/20 p-0.5 shadow-lg shadow-amber-500/10 border border-amber-500/30">
+            <div className="relative flex h-12 w-12 items-center justify-center overflow-hidden rounded-full bg-slate-950 p-0.5 shadow-lg shadow-amber-500/10 border-2 border-amber-500/40 shrink-0">
               <img
-                src={identidade.logoUrl}
+                src={identidade.logoUrl || '/logo-simetria.jpg'}
                 alt={identidade.nomeColegio}
-                className="h-full w-full object-cover rounded-[10px]"
+                className="h-full w-full object-contain rounded-full"
                 onError={(e) => {
-                  (e.target as HTMLElement).style.display = 'none';
+                  (e.target as HTMLImageElement).src = '/logo-simetria.jpg';
                 }}
               />
-              <Sparkles className="absolute -bottom-1 -right-1 h-4 w-4 text-amber-400" />
             </div>
             <div>
               <span className="font-serif text-lg font-bold tracking-tight text-white sm:text-xl">

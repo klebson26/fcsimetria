@@ -57,8 +57,15 @@ export const AdminLogin: React.FC<AdminLoginProps> = ({ onSuccess }) => {
       <div className="relative z-10 w-full max-w-md space-y-6">
         {/* Logo Banner */}
         <div className="text-center space-y-2">
-          <div className="inline-flex h-16 w-16 items-center justify-center rounded-2xl bg-amber-500/20 text-amber-400 border border-amber-500/30 shadow-xl shadow-amber-500/10">
-            <ShieldCheck className="h-8 w-8" />
+          <div className="inline-flex h-20 w-20 items-center justify-center rounded-full bg-slate-900 border-2 border-amber-500/50 p-1 shadow-2xl shadow-amber-500/20 overflow-hidden">
+            <img
+              src={identidade.logoUrl || '/logo-simetria.jpg'}
+              alt={identidade.nomeColegio}
+              className="h-full w-full object-contain rounded-full"
+              onError={(e) => {
+                (e.target as HTMLImageElement).src = '/logo-simetria.jpg';
+              }}
+            />
           </div>
           <h1 className="font-serif text-2xl font-bold text-white uppercase tracking-wider">
             PAINEL ADMINISTRATIVO
