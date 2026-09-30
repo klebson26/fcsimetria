@@ -7,14 +7,14 @@ import {
   KEYS,
   subscribeStorage
 } from '../../services/storageService';
-import { Cidade, ContentStatus } from '../../types/database';
-import { Building2, Plus, Edit2, Trash2, Copy, Search, Eye, Image } from 'lucide-react';
+import { Cidade, Regiao } from '../../types/database';
+import { Building2, Plus, Edit2, Trash2, Copy, Search, Image, MapPin } from 'lucide-react';
 import { ConfirmModal } from '../components/ConfirmModal';
 import { MediaPickerModal } from '../../components/MediaPickerModal';
 
 export const AdminCidades: React.FC = () => {
   const [cidades, setCidades] = useState<Cidade[]>(getCidades());
-  const [regioes] = useState(getRegioes());
+  const [regioes, setRegioes] = useState<Regiao[]>(getRegioes());
   const [filterQuery, setFilterQuery] = useState('');
   const [selectedRegiaoId, setSelectedRegiaoId] = useState<string>('ALL');
 
@@ -25,6 +25,7 @@ export const AdminCidades: React.FC = () => {
   useEffect(() => {
     return subscribeStorage(() => {
       setCidades(getCidades());
+      setRegioes(getRegioes());
     });
   }, []);
 
@@ -32,14 +33,30 @@ export const AdminCidades: React.FC = () => {
     e.preventDefault();
     if (!editingItem?.titulo) return;
 
-    const reg = regioes.find((r) => r.id === editingItem.regiaoId) || regioes[0];
+    const customRegiaoNome = (editingItem.regiaoNome || '').trim();
+    let reg = regioes.find(
+      (r) => r.id === editingItem.regiaoId || r.nome.toLowerCase() === customRegiaoNome.toLowerCase()
+    );
+
+    if (!reg && customRegiaoNome) {
+      const newReg: Regiao = {
+        id: 'reg_' + Date.now(),
+        nome: customRegiaoNome,
+        descricao: `Região ${customRegiaoNome} do Estado de São Paulo`,
+        corHex: '#f59e0b'
+      };
+      saveEntity(KEYS.REGIOES, newReg, 'Região');
+      reg = newReg;
+    } else if (!reg) {
+      reg = regioes[0] || { id: 'reg_1', nome: customRegiaoNome || 'Capital & RMC', descricao: '', corHex: '#f59e0b' };
+    }
 
     const newCidade: Cidade = {
       id: editingItem.id || 'cid_' + Date.now(),
       titulo: editingItem.titulo,
       descricao: editingItem.descricao || '',
       regiaoId: reg.id,
-      regiaoNome: reg.nome,
+      regiaoNome: customRegiaoNome || reg.nome,
       imagemPrincipal: editingItem.imagemPrincipal || '/images/sp_hero_banner_1790701710531.jpg',
       galeria: editingItem.galeria || [],
       historia: editingItem.historia || '',
@@ -73,7 +90,10 @@ export const AdminCidades: React.FC = () => {
   };
 
   const filtered = cidades.filter((c) => {
-    const matchesQuery = c.titulo.toLowerCase().includes(filterQuery.toLowerCase()) || c.descricao.toLowerCase().includes(filterQuery.toLowerCase());
+    const matchesQuery =
+      c.titulo.toLowerCase().includes(filterQuery.toLowerCase()) ||
+      c.descricao.toLowerCase().includes(filterQuery.toLowerCase()) ||
+      c.regiaoNome.toLowerCase().includes(filterQuery.toLowerCase());
     const matchesRegiao = selectedRegiaoId === 'ALL' || c.regiaoId === selectedRegiaoId;
     return matchesQuery && matchesRegiao;
   });
@@ -86,24 +106,26 @@ export const AdminCidades: React.FC = () => {
             <Building2 className="h-6 w-6 text-amber-400" /> Gerenciamento de Cidades Paulistas
           </h1>
           <p className="text-xs text-slate-400 mt-1">
-            Cadastre, edite e configure informações completas das cidades do Estado de SP.
+            Cadastre, edite e configure informações completas das cidades e regiões do Estado de SP.
           </p>
         </div>
 
         <button
-          onClick={() =>
+          onClick={() => {
+            const firstReg = regioes[0];
             setEditingItem({
               titulo: '',
               descricao: '',
-              regiaoId: regioes[0]?.id || 'reg_1',
+              regiaoId: firstReg?.id || 'reg_1',
+              regiaoNome: firstReg?.nome || 'Capital & RMC',
               imagemPrincipal: '/images/sp_hero_banner_1790701710531.jpg',
               status: 'PUBLICADO',
               populacao: '',
               distanciaCapital: '100 km',
               posicaoMapa: { x: 50, y: 50 },
               curiosidades: ['']
-            })
-          }
+            });
+          }}
           className="flex items-center gap-2 rounded-xl bg-amber-500 px-4 py-2.5 text-xs font-bold text-slate-950 hover:bg-amber-400 transition"
         >
           <Plus className="h-4 w-4" /> Cadastrar Nova Cidade
@@ -118,7 +140,7 @@ export const AdminCidades: React.FC = () => {
             type="text"
             value={filterQuery}
             onChange={(e) => setFilterQuery(e.target.value)}
-            placeholder="Pesquisar cidade por nome ou descrição..."
+            placeholder="Pesquisar cidade por nome, região ou descrição..."
             className="w-full rounded-xl border border-slate-800 bg-slate-900 pl-9 pr-3 py-2 text-xs text-white focus:outline-none"
           />
         </div>
@@ -138,8 +160,9 @@ export const AdminCidades: React.FC = () => {
       {/* Editor Modal Form */}
       {editingItem && (
         <form onSubmit={handleSave} className="rounded-2xl border border-amber-500/40 bg-slate-900 p-6 space-y-4 shadow-2xl">
-          <h3 className="font-serif text-lg font-bold text-white">
-            {editingItem.id ? 'Editar Cidade' : 'Cadastrar Nova Cidade'}
+          <h3 className="font-serif text-lg font-bold text-white flex items-center gap-2">
+            <Edit2 className="h-5 w-5 text-amber-400" />
+            {editingItem.id ? 'Editar Cidade e Região' : 'Cadastrar Nova Cidade'}
           </h3>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -150,21 +173,63 @@ export const AdminCidades: React.FC = () => {
                 required
                 value={editingItem.titulo || ''}
                 onChange={(e) => setEditingItem({ ...editingItem, titulo: e.target.value })}
-                className="w-full rounded-xl border border-slate-800 bg-slate-950 px-3 py-2 text-xs text-white focus:outline-none"
+                placeholder="Ex: Santos, Campinas, Campos do Jordão..."
+                className="w-full rounded-xl border border-slate-800 bg-slate-950 px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-400"
               />
             </div>
 
-            <div className="space-y-1">
-              <label className="text-xs font-semibold text-slate-300">Região Paulista</label>
-              <select
-                value={editingItem.regiaoId || regioes[0]?.id}
-                onChange={(e) => setEditingItem({ ...editingItem, regiaoId: e.target.value })}
-                className="w-full rounded-xl border border-slate-800 bg-slate-950 px-3 py-2 text-xs text-white focus:outline-none"
-              >
-                {regioes.map((r) => (
-                  <option key={r.id} value={r.id}>{r.nome}</option>
-                ))}
-              </select>
+            {/* Região Selector and Custom Field */}
+            <div className="space-y-1 sm:col-span-1">
+              <label className="text-xs font-semibold text-amber-400 flex items-center gap-1">
+                <MapPin className="h-3.5 w-3.5" /> Região Paulista
+              </label>
+              <div className="space-y-2">
+                <select
+                  value={editingItem.regiaoId || ''}
+                  onChange={(e) => {
+                    const selectedId = e.target.value;
+                    if (selectedId === 'CUSTOM') {
+                      setEditingItem({ ...editingItem, regiaoId: '', regiaoNome: '' });
+                    } else {
+                      const found = regioes.find((r) => r.id === selectedId);
+                      if (found) {
+                        setEditingItem({
+                          ...editingItem,
+                          regiaoId: found.id,
+                          regiaoNome: found.nome
+                        });
+                      }
+                    }
+                  }}
+                  className="w-full rounded-xl border border-slate-800 bg-slate-950 px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-400"
+                >
+                  <option value="">-- Selecionar Região Existente --</option>
+                  {regioes.map((r) => (
+                    <option key={r.id} value={r.id}>{r.nome}</option>
+                  ))}
+                  <option value="CUSTOM">+ Digitar Nova Região Customizada</option>
+                </select>
+
+                <input
+                  type="text"
+                  required
+                  placeholder="Ou digite/edite o nome da região..."
+                  value={editingItem.regiaoNome || ''}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    const matchingReg = regioes.find((r) => r.nome.toLowerCase() === val.trim().toLowerCase());
+                    setEditingItem({
+                      ...editingItem,
+                      regiaoNome: val,
+                      regiaoId: matchingReg ? matchingReg.id : ''
+                    });
+                  }}
+                  className="w-full rounded-xl border border-amber-500/40 bg-slate-950 px-3 py-2 text-xs text-amber-200 placeholder-slate-500 focus:outline-none focus:border-amber-400 font-medium"
+                />
+              </div>
+              <p className="text-[10px] text-slate-400 mt-1">
+                Você pode selecionar uma região existente no menu ou digitar um novo nome livremente para cadastrar uma nova região.
+              </p>
             </div>
 
             <div className="sm:col-span-2 space-y-1">
@@ -173,7 +238,8 @@ export const AdminCidades: React.FC = () => {
                 value={editingItem.descricao || ''}
                 onChange={(e) => setEditingItem({ ...editingItem, descricao: e.target.value })}
                 rows={2}
-                className="w-full rounded-xl border border-slate-800 bg-slate-950 px-3 py-2 text-xs text-white focus:outline-none"
+                placeholder="Resumo sobre a cidade para os cartões de exibição..."
+                className="w-full rounded-xl border border-slate-800 bg-slate-950 px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-400"
               />
             </div>
 
@@ -184,7 +250,7 @@ export const AdminCidades: React.FC = () => {
                   type="text"
                   value={editingItem.imagemPrincipal || ''}
                   onChange={(e) => setEditingItem({ ...editingItem, imagemPrincipal: e.target.value })}
-                  className="flex-1 rounded-xl border border-slate-800 bg-slate-950 px-3 py-2 text-xs text-white focus:outline-none"
+                  className="flex-1 rounded-xl border border-slate-800 bg-slate-950 px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-400"
                 />
                 <button
                   type="button"
@@ -203,7 +269,7 @@ export const AdminCidades: React.FC = () => {
                 value={editingItem.populacao || ''}
                 onChange={(e) => setEditingItem({ ...editingItem, populacao: e.target.value })}
                 placeholder="Ex: 500.000 hab"
-                className="w-full rounded-xl border border-slate-800 bg-slate-950 px-3 py-2 text-xs text-white focus:outline-none"
+                className="w-full rounded-xl border border-slate-800 bg-slate-950 px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-400"
               />
             </div>
 
@@ -213,7 +279,8 @@ export const AdminCidades: React.FC = () => {
                 value={editingItem.historia || ''}
                 onChange={(e) => setEditingItem({ ...editingItem, historia: e.target.value })}
                 rows={3}
-                className="w-full rounded-xl border border-slate-800 bg-slate-950 px-3 py-2 text-xs text-white focus:outline-none"
+                placeholder="A história da cidade, fundação e fatos importantes..."
+                className="w-full rounded-xl border border-slate-800 bg-slate-950 px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-400"
               />
             </div>
 
@@ -235,13 +302,13 @@ export const AdminCidades: React.FC = () => {
             <button
               type="button"
               onClick={() => setEditingItem(null)}
-              className="rounded-xl border border-slate-800 bg-slate-950 px-4 py-2 text-xs font-semibold text-slate-300"
+              className="rounded-xl border border-slate-800 bg-slate-950 px-4 py-2 text-xs font-semibold text-slate-300 hover:bg-slate-800"
             >
               Cancelar
             </button>
             <button
               type="submit"
-              className="rounded-xl bg-amber-500 px-5 py-2 text-xs font-bold text-slate-950 hover:bg-amber-400"
+              className="rounded-xl bg-amber-500 px-5 py-2 text-xs font-bold text-slate-950 hover:bg-amber-400 transition"
             >
               Salvar Cidade
             </button>
@@ -254,17 +321,20 @@ export const AdminCidades: React.FC = () => {
         {filtered.map((city) => (
           <div
             key={city.id}
-            className="rounded-2xl border border-slate-800 bg-slate-900 p-5 space-y-4 flex flex-col justify-between"
+            className="rounded-2xl border border-slate-800 bg-slate-900 p-5 space-y-4 flex flex-col justify-between hover:border-slate-700 transition"
           >
             <div className="space-y-3">
-              <div className="h-40 w-full overflow-hidden rounded-xl bg-slate-950">
+              <div className="h-40 w-full overflow-hidden rounded-xl bg-slate-950 relative">
                 <img src={city.imagemPrincipal} alt={city.titulo} className="h-full w-full object-cover" />
+                <div className="absolute top-2 left-2 bg-slate-950/80 backdrop-blur-md px-2.5 py-1 rounded-lg border border-slate-800 text-[10px] font-bold text-amber-400 flex items-center gap-1">
+                  <MapPin className="h-3 w-3" /> {city.regiaoNome}
+                </div>
               </div>
 
               <div>
                 <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-bold uppercase tracking-widest text-amber-400">
-                    {city.regiaoNome}
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400">
+                    {city.distanciaCapital || 'Estado de SP'}
                   </span>
                   <span
                     className={`rounded-md px-2 py-0.5 text-[10px] font-bold ${
@@ -285,7 +355,7 @@ export const AdminCidades: React.FC = () => {
               <button
                 onClick={() => handleDuplicate(city)}
                 title="Duplicar"
-                className="flex items-center gap-1 text-xs text-slate-400 hover:text-amber-400"
+                className="flex items-center gap-1 text-xs text-slate-400 hover:text-amber-400 transition"
               >
                 <Copy className="h-3.5 w-3.5" /> Duplicar
               </button>
@@ -293,13 +363,15 @@ export const AdminCidades: React.FC = () => {
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => setEditingItem(city)}
-                  className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-800 bg-slate-950 text-blue-400 hover:bg-blue-500/20"
+                  title="Editar Cidade e Região"
+                  className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-800 bg-slate-950 text-blue-400 hover:bg-blue-500/20 transition"
                 >
                   <Edit2 className="h-4 w-4" />
                 </button>
                 <button
                   onClick={() => setDeleteConfirmId(city.id)}
-                  className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-800 bg-slate-950 text-rose-400 hover:bg-rose-500/20"
+                  title="Excluir"
+                  className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-800 bg-slate-950 text-rose-400 hover:bg-rose-500/20 transition"
                 >
                   <Trash2 className="h-4 w-4" />
                 </button>
