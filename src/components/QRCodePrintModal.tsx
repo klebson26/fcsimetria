@@ -1,73 +1,161 @@
 import React, { useState, useEffect, useRef } from 'react';
 import QRCode from 'qrcode';
-import { getIdentidade } from '../services/storageService';
-import { QrCode, Printer, X, Sparkles, Smartphone, Landmark, ShoppingBag, Compass, Award, ExternalLink } from 'lucide-react';
+import { getIdentidade, getCidades } from '../services/storageService';
+import { Cidade } from '../types/database';
+import {
+  QrCode,
+  Printer,
+  X,
+  Sparkles,
+  Smartphone,
+  Landmark,
+  ShoppingBag,
+  Compass,
+  Award,
+  ExternalLink,
+  Download,
+  Building2,
+  Utensils,
+  Palette,
+  Music,
+  Clock,
+  HelpCircle,
+  MapPin,
+  Check
+} from 'lucide-react';
 
 interface QRCodePrintModalProps {
   onClose: () => void;
-  initialTopic?: 'geral' | 'paulista' | 'mercadao' | 'liberdade' | 'quiz';
+  initialTopic?: string;
 }
 
 export const QRCodePrintModal: React.FC<QRCodePrintModalProps> = ({
   onClose,
   initialTopic = 'geral'
 }) => {
-  const [selectedTopic, setSelectedTopic] = useState<'geral' | 'paulista' | 'mercadao' | 'liberdade' | 'quiz'>(initialTopic);
+  const [selectedTopic, setSelectedTopic] = useState<string>(initialTopic);
+  const [selectedCidadeId, setSelectedCidadeId] = useState<string>('');
   const [qrDataUrl, setQrDataUrl] = useState<string>('');
   const [customTableNumber, setCustomTableNumber] = useState<string>('01');
-  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const [copied, setCopied] = useState(false);
 
   const identidade = getIdentidade();
+  const cidades = getCidades().filter((c) => c.status === 'PUBLICADO');
 
   const baseUrl = window.location.origin + window.location.pathname;
 
-  const topicsMap = {
+  // Dictionary of main topics
+  const topicsMap: Record<
+    string,
+    {
+      title: string;
+      subtitle: string;
+      url: string;
+      icon: any;
+      badge: string;
+    }
+  > = {
     geral: {
-      title: 'Site Geral da Feira Cultural',
-      subtitle: 'Explore todo o Estado de São Paulo',
+      title: 'Portal Geral da Feira Cultural',
+      subtitle: 'Explore o mapa, cidades, gastronomia e história de São Paulo',
       url: baseUrl + '#',
       icon: Sparkles,
-      color: 'from-amber-500 to-amber-600',
       badge: 'EXPLORAR TUDO'
+    },
+    cidades: {
+      title: 'Cidades Paulistas',
+      subtitle: 'Municípios do litoral, interior e região metropolitana de SP',
+      url: baseUrl + '#cidades',
+      icon: Building2,
+      badge: 'CIDADES DE SP'
     },
     paulista: {
       title: 'Especial Avenida Paulista',
       subtitle: 'História, MASP, arquitetura e atrativos da Paulista',
       url: baseUrl + '#paulista',
       icon: Landmark,
-      color: 'from-rose-500 to-rose-600',
       badge: 'AV. PAULISTA'
     },
     mercadao: {
-      title: 'Mercadão de São Paulo',
-      subtitle: 'Iguarias, vitrais históricos e sanduíche de mortadela',
+      title: 'Mercadão Municipal de SP',
+      subtitle: 'Iguarias, vitrais históricos e o famoso sanduíche de mortadela',
       url: baseUrl + '#mercadao',
       icon: ShoppingBag,
-      color: 'from-amber-500 to-amber-600',
-      badge: 'MERCADÃO MUNICIPAL'
+      badge: 'MERCADÃO SP'
     },
     liberdade: {
       title: 'Bairro da Liberdade',
-      subtitle: 'Tradição oriental, gastronomia e cultura asiática',
+      subtitle: 'Tradição oriental, feirinha, gastronomia e cultura asiática',
       url: baseUrl + '#liberdade',
       icon: Compass,
-      color: 'from-purple-500 to-purple-600',
-      badge: 'BAIRRO DA LIBERDADE'
+      badge: 'LIBERDADE'
+    },
+    culinaria: {
+      title: 'Gastronomia & Pratos Típicos',
+      subtitle: 'Sabores marcantes da culinária paulistana e caipira',
+      url: baseUrl + '#culinaria',
+      icon: Utensils,
+      badge: 'GASTRONOMIA'
+    },
+    artesanato: {
+      title: 'Artesanato & Arte Popular',
+      subtitle: 'Tradição artesanal, feiras de arte e mestres paulistas',
+      url: baseUrl + '#artesanato',
+      icon: Palette,
+      badge: 'ARTESANATO'
+    },
+    cultura: {
+      title: 'Cultura & Folclore de SP',
+      subtitle: 'Festas tradicionais, danças, música caipira e manifestações',
+      url: baseUrl + '#cultura',
+      icon: Music,
+      badge: 'CULTURA & FOLCLORE'
+    },
+    historia: {
+      title: 'História & Linha do Tempo',
+      subtitle: 'Da fundação de São Paulo aos dias atuais',
+      url: baseUrl + '#historia',
+      icon: Clock,
+      badge: 'HISTÓRIA DE SP'
     },
     quiz: {
       title: 'Quiz Cultural da Feira',
-      subtitle: 'Responda as perguntas na mesa e ganhe seu certificado!',
+      subtitle: 'Responda as perguntas na mesa e teste seus conhecimentos!',
       url: baseUrl + '#quiz',
       icon: Award,
-      color: 'from-blue-500 to-indigo-600',
       badge: 'DESAFIO QUIZ'
+    },
+    duvidas: {
+      title: 'Mural de Dúvidas & Perguntas',
+      subtitle: 'Envie sua mensagem ou pergunta durante a feira cultural',
+      url: baseUrl + '#duvidas',
+      icon: HelpCircle,
+      badge: 'PERGUNTAS'
     }
   };
 
-  const currentTopicData = topicsMap[selectedTopic];
+  // Check if topic is a specific city
+  let currentTopicData = topicsMap[selectedTopic];
+
+  if (!currentTopicData && selectedCidadeId) {
+    const city = cidades.find((c) => c.id === selectedCidadeId);
+    if (city) {
+      currentTopicData = {
+        title: `Cidade: ${city.titulo}`,
+        subtitle: `${city.regiaoNome} · População: ${city.populacao || 'N/A'}`,
+        url: `${baseUrl}#cidades`,
+        icon: MapPin,
+        badge: `FICHA: ${city.titulo.toUpperCase()}`
+      };
+    }
+  }
+
+  // Fallback to Geral if topic not found
+  if (!currentTopicData) {
+    currentTopicData = topicsMap.geral;
+  }
 
   useEffect(() => {
-    // Generate QR Code data URL
     QRCode.toDataURL(currentTopicData.url, {
       width: 400,
       margin: 2,
@@ -82,28 +170,45 @@ export const QRCodePrintModal: React.FC<QRCodePrintModalProps> = ({
       .catch((err) => {
         console.error('Error generating QR code:', err);
       });
-  }, [selectedTopic, currentTopicData.url]);
+  }, [currentTopicData.url]);
 
   const handlePrint = () => {
     window.print();
   };
 
+  const handleDownloadImage = () => {
+    if (!qrDataUrl) return;
+    const link = document.createElement('a');
+    link.href = qrDataUrl;
+    link.download = `qrcode_feiracultural_${selectedTopic}_simetria.png`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const handleCopyLink = () => {
+    navigator.clipboard.writeText(currentTopicData.url).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/85 p-4 backdrop-blur-md overflow-y-auto print:p-0 print:bg-white print:static print:block animate-fade-in">
-      {/* Non-printable modal wrapper card */}
-      <div className="relative w-full max-w-2xl rounded-3xl border border-amber-500/40 bg-slate-900 p-6 sm:p-8 shadow-2xl space-y-6 print:border-none print:shadow-none print:bg-white print:p-0 print:w-full animate-fade-in-scale">
+      {/* Modal Wrapper */}
+      <div className="relative w-full max-w-3xl rounded-3xl border border-amber-500/40 bg-slate-900 p-6 sm:p-8 shadow-2xl space-y-6 print:border-none print:shadow-none print:bg-white print:p-0 print:w-full animate-fade-in-scale">
         {/* Modal Controls Header (Hidden on Print) */}
         <div className="flex items-center justify-between border-b border-slate-800 pb-4 print:hidden">
           <div className="flex items-center gap-2">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-500/10 text-amber-400 border border-amber-500/30">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-500/10 text-amber-400 border border-amber-500/30">
               <QrCode className="h-5 w-5" />
             </div>
             <div>
               <h3 className="font-serif text-lg font-bold text-white">
-                Display de Mesa com QR Code
+                Gerador de QR Code por Tópico & Totem de Mesa
               </h3>
               <p className="text-xs text-slate-400">
-                Imprima este cartão para colocar nas mesas dos visitantes durante a feira cultural.
+                Selecione qualquer tópico ou cidade específica para gerar o QR Code direcionado.
               </p>
             </div>
           </div>
@@ -116,48 +221,85 @@ export const QRCodePrintModal: React.FC<QRCodePrintModalProps> = ({
           </button>
         </div>
 
-        {/* Topic Selector Tabs (Hidden on Print) */}
-        <div className="space-y-3 print:hidden">
-          <label className="text-xs font-bold uppercase tracking-wider text-slate-400 block">
-            Selecione o Tópico Principal do QR Code:
-          </label>
+        {/* Topic & City Selection Tabs (Hidden on Print) */}
+        <div className="space-y-4 print:hidden">
+          <div className="space-y-2">
+            <label className="text-xs font-bold uppercase tracking-wider text-amber-400 block">
+              1. Escolha o Tópico da Feira para o QR Code:
+            </label>
 
-          <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
-            {(Object.keys(topicsMap) as Array<'geral' | 'paulista' | 'mercadao' | 'liberdade' | 'quiz'>).map((key) => {
-              const item = topicsMap[key];
-              const Icon = item.icon;
-              const isSelected = selectedTopic === key;
+            <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-2">
+              {Object.keys(topicsMap).map((key) => {
+                const item = topicsMap[key];
+                const Icon = item.icon;
+                const isSelected = selectedTopic === key && !selectedCidadeId;
 
-              return (
-                <button
-                  key={key}
-                  onClick={() => setSelectedTopic(key)}
-                  className={`flex flex-col items-center justify-center gap-1.5 p-2.5 rounded-xl border text-center transition ${
-                    isSelected
-                      ? 'border-amber-500 bg-amber-500/10 text-amber-300 font-bold shadow-md shadow-amber-500/10'
-                      : 'border-slate-800 bg-slate-950/80 text-slate-400 hover:border-slate-700 hover:text-white'
-                  }`}
-                >
-                  <Icon className="h-4 w-4" />
-                  <span className="text-[11px] truncate w-full">{item.badge}</span>
-                </button>
-              );
-            })}
+                return (
+                  <button
+                    key={key}
+                    onClick={() => {
+                      setSelectedTopic(key);
+                      setSelectedCidadeId('');
+                    }}
+                    className={`flex flex-col items-center justify-center gap-1.5 p-2 rounded-xl border text-center transition ${
+                      isSelected
+                        ? 'border-amber-500 bg-amber-500/15 text-amber-300 font-bold shadow-md shadow-amber-500/10'
+                        : 'border-slate-800 bg-slate-950/80 text-slate-400 hover:border-slate-700 hover:text-white'
+                    }`}
+                  >
+                    <Icon className="h-4 w-4" />
+                    <span className="text-[10px] truncate w-full font-medium">{item.badge}</span>
+                  </button>
+                );
+              })}
+            </div>
           </div>
 
-          <div className="flex items-center gap-3 pt-2">
-            <span className="text-xs text-slate-400 font-medium">Número da Mesa (opcional):</span>
-            <input
-              type="text"
-              value={customTableNumber}
-              onChange={(e) => setCustomTableNumber(e.target.value)}
-              placeholder="Ex: 01"
-              className="w-20 rounded-xl border border-slate-800 bg-slate-950 px-3 py-1 text-xs text-center font-bold text-amber-400 focus:outline-none"
-            />
+          {/* City Specific Selector */}
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 pt-1 border-t border-slate-800/80">
+            <div className="flex-1 space-y-1">
+              <label className="text-xs font-semibold text-slate-300 flex items-center gap-1">
+                <MapPin className="h-3.5 w-3.5 text-amber-400" /> Ou Direcionar para Ficha de uma Cidade Específica:
+              </label>
+              <select
+                value={selectedCidadeId}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setSelectedCidadeId(val);
+                  if (val) {
+                    const city = cidades.find((c) => c.id === val);
+                    if (city) {
+                      setSelectedTopic(`cidade_${city.id}`);
+                    }
+                  } else {
+                    setSelectedTopic('geral');
+                  }
+                }}
+                className="w-full rounded-xl border border-slate-800 bg-slate-950 px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-500/50"
+              >
+                <option value="">-- Selecionar Cidade Específica --</option>
+                {cidades.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.titulo} ({c.regiaoNome})
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-xs font-semibold text-slate-300 block">Número/Nome da Mesa:</label>
+              <input
+                type="text"
+                value={customTableNumber}
+                onChange={(e) => setCustomTableNumber(e.target.value)}
+                placeholder="Ex: 01"
+                className="w-full sm:w-28 rounded-xl border border-slate-800 bg-slate-950 px-3 py-2 text-xs text-center font-bold text-amber-400 focus:outline-none"
+              />
+            </div>
           </div>
         </div>
 
-        {/* PRINTABLE DISPLAY STAND CARD (Visible both on screen and on print) */}
+        {/* PRINTABLE DISPLAY STAND CARD */}
         <div className="printable-stand-card mx-auto max-w-md rounded-2xl border-4 border-amber-500 bg-slate-950 p-6 sm:p-8 text-center shadow-2xl relative space-y-4 print:border-4 print:border-slate-900 print:bg-white print:text-slate-950 print:shadow-none print:m-0 print:max-w-none">
           {/* Top School Header */}
           <div className="flex items-center justify-between border-b border-amber-500/30 pb-3 print:border-slate-300">
@@ -189,15 +331,15 @@ export const QRCodePrintModal: React.FC<QRCodePrintModalProps> = ({
             )}
           </div>
 
-          {/* Headline & Banner */}
-          <div className="space-y-1 py-1">
+          {/* Headline & Badge */}
+          <div className="space-y-1.5 py-1">
             <span className="inline-block text-[10px] font-bold uppercase tracking-widest text-amber-400 bg-amber-500/20 px-3 py-0.5 rounded-full border border-amber-500/30 print:bg-amber-100 print:text-amber-800">
               {currentTopicData.badge}
             </span>
             <h2 className="font-serif text-xl sm:text-2xl font-bold text-white print:text-slate-950 leading-tight">
               {currentTopicData.title}
             </h2>
-            <p className="text-xs text-slate-300 print:text-slate-600">
+            <p className="text-xs text-slate-300 print:text-slate-600 leading-relaxed">
               {currentTopicData.subtitle}
             </p>
           </div>
@@ -232,15 +374,23 @@ export const QRCodePrintModal: React.FC<QRCodePrintModalProps> = ({
         </div>
 
         {/* Modal Action Footer (Hidden on Print) */}
-        <div className="flex items-center justify-between border-t border-slate-800 pt-4 print:hidden">
-          <a
-            href={currentTopicData.url}
-            target="_blank"
-            rel="noreferrer"
-            className="flex items-center gap-1.5 text-xs text-amber-400 hover:underline"
-          >
-            <ExternalLink className="h-3.5 w-3.5" /> Abrir Link Direto
-          </a>
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 border-t border-slate-800 pt-4 print:hidden">
+          <div className="flex items-center gap-3">
+            <button
+              onClick={handleCopyLink}
+              className="flex items-center gap-1.5 text-xs text-amber-400 hover:text-amber-300 transition"
+            >
+              {copied ? <Check className="h-3.5 w-3.5 text-emerald-400" /> : <ExternalLink className="h-3.5 w-3.5" />}
+              <span>{copied ? 'Link Copiado!' : 'Copiar Link'}</span>
+            </button>
+
+            <button
+              onClick={handleDownloadImage}
+              className="flex items-center gap-1.5 text-xs text-slate-300 hover:text-white transition"
+            >
+              <Download className="h-3.5 w-3.5 text-blue-400" /> Baixar Imagem PNG
+            </button>
+          </div>
 
           <div className="flex items-center gap-3">
             <button

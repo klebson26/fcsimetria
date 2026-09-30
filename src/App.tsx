@@ -59,7 +59,7 @@ export default function App() {
   const [showFairModeModal, setShowFairModeModal] = useState(false);
   const [showSearchModal, setShowSearchModal] = useState(false);
   const [showQRCodeModal, setShowQRCodeModal] = useState(false);
-  const [selectedQrTopic, setSelectedQrTopic] = useState<'geral' | 'paulista' | 'mercadao' | 'liberdade' | 'quiz'>('geral');
+  const [selectedQrTopic, setSelectedQrTopic] = useState<string>('geral');
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const [adminSearchQuery, setAdminSearchQuery] = useState('');
 

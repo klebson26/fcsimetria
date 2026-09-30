@@ -43,7 +43,7 @@ import {
 interface HomeViewProps {
   onNavigateToQuiz: () => void;
   onOpenFairMode: () => void;
-  onOpenQRCodeModal: (topic?: 'geral' | 'paulista' | 'mercadao' | 'liberdade' | 'quiz') => void;
+  onOpenQRCodeModal: (topic?: string) => void;
   onSelectCidade: (cidade: Cidade) => void;
 }
 
@@ -377,6 +377,13 @@ export const HomeView: React.FC<HomeViewProps> = ({
                 Conheça os municípios que compõem a rica diversidade cultural, turística e econômica paulista.
               </p>
             </div>
+
+            <button
+              onClick={() => onOpenQRCodeModal('cidades')}
+              className="flex items-center gap-1.5 self-start sm:self-center rounded-xl bg-slate-900 border border-amber-500/30 px-3.5 py-2 text-xs font-bold text-amber-400 hover:bg-amber-500 hover:text-slate-950 transition shadow-md shrink-0"
+            >
+              <QrCode className="h-4 w-4" /> Gerar QR Code da Seção
+            </button>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -778,6 +785,13 @@ export const HomeView: React.FC<HomeViewProps> = ({
                 Culinária Caipira, Caiçara e Urbana
               </h2>
             </div>
+
+            <button
+              onClick={() => onOpenQRCodeModal('culinaria')}
+              className="flex items-center gap-1.5 self-start sm:self-center rounded-xl bg-slate-900 border border-orange-500/30 px-3.5 py-2 text-xs font-bold text-orange-400 hover:bg-orange-500 hover:text-slate-950 transition shadow-md shrink-0"
+            >
+              <QrCode className="h-4 w-4" /> Gerar QR Code Culinária
+            </button>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -820,6 +834,13 @@ export const HomeView: React.FC<HomeViewProps> = ({
                 Peças em cerâmica de alta temperatura de Cunha, tecelagem tradicional, esculturas em madeira e arte caiçara.
               </p>
             </div>
+
+            <button
+              onClick={() => onOpenQRCodeModal('artesanato')}
+              className="flex items-center gap-1.5 self-start sm:self-center rounded-xl bg-slate-900 border border-amber-500/30 px-3.5 py-2 text-xs font-bold text-amber-400 hover:bg-amber-500 hover:text-slate-950 transition shadow-md shrink-0"
+            >
+              <QrCode className="h-4 w-4" /> Gerar QR Code Artesanato
+            </button>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">

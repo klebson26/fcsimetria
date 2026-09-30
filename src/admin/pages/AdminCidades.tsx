@@ -8,7 +8,22 @@ import {
   subscribeStorage
 } from '../../services/storageService';
 import { Cidade, Regiao } from '../../types/database';
-import { Building2, Plus, Edit2, Trash2, Copy, Search, Image, MapPin } from 'lucide-react';
+import {
+  Building2,
+  Plus,
+  Edit2,
+  Trash2,
+  Copy,
+  Search,
+  Image,
+  MapPin,
+  FileText,
+  Eye,
+  X,
+  Info,
+  Utensils,
+  BookOpen
+} from 'lucide-react';
 import { ConfirmModal } from '../components/ConfirmModal';
 import { MediaPickerModal } from '../../components/MediaPickerModal';
 
@@ -19,6 +34,7 @@ export const AdminCidades: React.FC = () => {
   const [selectedRegiaoId, setSelectedRegiaoId] = useState<string>('ALL');
 
   const [editingItem, setEditingItem] = useState<Partial<Cidade> | null>(null);
+  const [previewCity, setPreviewCity] = useState<Cidade | null>(null);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [showMediaPicker, setShowMediaPicker] = useState(false);
 
@@ -51,6 +67,17 @@ export const AdminCidades: React.FC = () => {
       reg = regioes[0] || { id: 'reg_1', nome: customRegiaoNome || 'Capital & RMC', descricao: '', corHex: '#f59e0b' };
     }
 
+    // Process curiosidades array from text line by line
+    let curiosidadesArr: string[] = [];
+    if (typeof editingItem.curiosidades === 'string') {
+      curiosidadesArr = (editingItem.curiosidades as string)
+        .split('\n')
+        .map((s) => s.trim())
+        .filter(Boolean);
+    } else if (Array.isArray(editingItem.curiosidades)) {
+      curiosidadesArr = editingItem.curiosidades.map((c) => String(c).trim()).filter(Boolean);
+    }
+
     const newCidade: Cidade = {
       id: editingItem.id || 'cid_' + Date.now(),
       titulo: editingItem.titulo,
@@ -63,7 +90,7 @@ export const AdminCidades: React.FC = () => {
       cultura: editingItem.cultura || '',
       gastronomia: editingItem.gastronomia || '',
       turismo: editingItem.turismo || '',
-      curiosidades: editingItem.curiosidades || [],
+      curiosidades: curiosidadesArr,
       populacao: editingItem.populacao || '',
       distanciaCapital: editingItem.distanciaCapital || '0 km',
       posicaoMapa: editingItem.posicaoMapa || { x: 50, y: 50 },
@@ -103,10 +130,10 @@ export const AdminCidades: React.FC = () => {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="font-serif text-2xl font-bold text-white flex items-center gap-2">
-            <Building2 className="h-6 w-6 text-amber-400" /> Gerenciamento de Cidades Paulistas
+            <Building2 className="h-6 w-6 text-amber-400" /> Edição de Cidades & Fichas Técnicas
           </h1>
           <p className="text-xs text-slate-400 mt-1">
-            Cadastre, edite e configure informações completas das cidades e regiões do Estado de SP.
+            Altere todos os dados da ficha de cada cidade: história, população, gastronomia, curiosidades e região.
           </p>
         </div>
 
@@ -122,11 +149,14 @@ export const AdminCidades: React.FC = () => {
               status: 'PUBLICADO',
               populacao: '',
               distanciaCapital: '100 km',
-              posicaoMapa: { x: 50, y: 50 },
-              curiosidades: ['']
+              historia: '',
+              gastronomia: '',
+              turismo: '',
+              curiosidades: [],
+              posicaoMapa: { x: 50, y: 50 }
             });
           }}
-          className="flex items-center gap-2 rounded-xl bg-amber-500 px-4 py-2.5 text-xs font-bold text-slate-950 hover:bg-amber-400 transition"
+          className="flex items-center gap-2 rounded-xl bg-amber-500 px-4 py-2.5 text-xs font-bold text-slate-950 hover:bg-amber-400 transition shadow-lg shadow-amber-500/10"
         >
           <Plus className="h-4 w-4" /> Cadastrar Nova Cidade
         </button>
@@ -141,33 +171,43 @@ export const AdminCidades: React.FC = () => {
             value={filterQuery}
             onChange={(e) => setFilterQuery(e.target.value)}
             placeholder="Pesquisar cidade por nome, região ou descrição..."
-            className="w-full rounded-xl border border-slate-800 bg-slate-900 pl-9 pr-3 py-2 text-xs text-white focus:outline-none"
+            className="w-full rounded-xl border border-slate-800 bg-slate-900 pl-9 pr-3 py-2 text-xs text-white focus:outline-none focus:border-amber-500/50"
           />
         </div>
 
         <select
           value={selectedRegiaoId}
           onChange={(e) => setSelectedRegiaoId(e.target.value)}
-          className="rounded-xl border border-slate-800 bg-slate-900 px-3 py-2 text-xs text-white focus:outline-none"
+          className="rounded-xl border border-slate-800 bg-slate-900 px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-500/50"
         >
-          <option value="ALL">Todas as Regiões</option>
+          <option value="ALL">Todas as Regiões ({cidades.length})</option>
           {regioes.map((r) => (
             <option key={r.id} value={r.id}>{r.nome}</option>
           ))}
         </select>
       </div>
 
-      {/* Editor Modal Form */}
+      {/* Editor Modal Form for City Ficha */}
       {editingItem && (
-        <form onSubmit={handleSave} className="rounded-2xl border border-amber-500/40 bg-slate-900 p-6 space-y-4 shadow-2xl">
-          <h3 className="font-serif text-lg font-bold text-white flex items-center gap-2">
-            <Edit2 className="h-5 w-5 text-amber-400" />
-            {editingItem.id ? 'Editar Cidade e Região' : 'Cadastrar Nova Cidade'}
-          </h3>
+        <form onSubmit={handleSave} className="rounded-2xl border border-amber-500/50 bg-slate-900 p-6 space-y-5 shadow-2xl animate-fade-in">
+          <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+            <h3 className="font-serif text-lg font-bold text-white flex items-center gap-2">
+              <FileText className="h-5 w-5 text-amber-400" />
+              {editingItem.id ? `Editar Ficha da Cidade: ${editingItem.titulo || ''}` : 'Cadastrar Nova Ficha de Cidade'}
+            </h3>
+            <button
+              type="button"
+              onClick={() => setEditingItem(null)}
+              className="text-slate-400 hover:text-white"
+            >
+              <X className="h-5 w-5" />
+            </button>
+          </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {/* Nome da Cidade */}
             <div className="space-y-1">
-              <label className="text-xs font-semibold text-slate-300">Nome da Cidade</label>
+              <label className="text-xs font-semibold text-slate-200">Nome da Cidade *</label>
               <input
                 type="text"
                 required
@@ -178,12 +218,12 @@ export const AdminCidades: React.FC = () => {
               />
             </div>
 
-            {/* Região Selector and Custom Field */}
-            <div className="space-y-1 sm:col-span-1">
+            {/* Região Paulista */}
+            <div className="space-y-1">
               <label className="text-xs font-semibold text-amber-400 flex items-center gap-1">
-                <MapPin className="h-3.5 w-3.5" /> Região Paulista
+                <MapPin className="h-3.5 w-3.5" /> Região Paulista *
               </label>
-              <div className="space-y-2">
+              <div className="space-y-1.5">
                 <select
                   value={editingItem.regiaoId || ''}
                   onChange={(e) => {
@@ -213,7 +253,7 @@ export const AdminCidades: React.FC = () => {
                 <input
                   type="text"
                   required
-                  placeholder="Ou digite/edite o nome da região..."
+                  placeholder="Ou edite/digite o nome da região..."
                   value={editingItem.regiaoNome || ''}
                   onChange={(e) => {
                     const val = e.target.value;
@@ -227,29 +267,29 @@ export const AdminCidades: React.FC = () => {
                   className="w-full rounded-xl border border-amber-500/40 bg-slate-950 px-3 py-2 text-xs text-amber-200 placeholder-slate-500 focus:outline-none focus:border-amber-400 font-medium"
                 />
               </div>
-              <p className="text-[10px] text-slate-400 mt-1">
-                Você pode selecionar uma região existente no menu ou digitar um novo nome livremente para cadastrar uma nova região.
-              </p>
             </div>
 
+            {/* Descrição Resumida */}
             <div className="sm:col-span-2 space-y-1">
-              <label className="text-xs font-semibold text-slate-300">Descrição Curta</label>
+              <label className="text-xs font-semibold text-slate-200">Descrição Curta (Aparece no Card Principal)</label>
               <textarea
                 value={editingItem.descricao || ''}
                 onChange={(e) => setEditingItem({ ...editingItem, descricao: e.target.value })}
                 rows={2}
-                placeholder="Resumo sobre a cidade para os cartões de exibição..."
+                placeholder="Resumo que aparece no cartão inicial da cidade..."
                 className="w-full rounded-xl border border-slate-800 bg-slate-950 px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-400"
               />
             </div>
 
+            {/* Imagem Principal */}
             <div className="space-y-1">
-              <label className="text-xs font-semibold text-slate-300">Imagem Principal</label>
+              <label className="text-xs font-semibold text-slate-200">Imagem da Ficha da Cidade</label>
               <div className="flex gap-2">
                 <input
                   type="text"
                   value={editingItem.imagemPrincipal || ''}
                   onChange={(e) => setEditingItem({ ...editingItem, imagemPrincipal: e.target.value })}
+                  placeholder="/images/... ou URL da foto"
                   className="flex-1 rounded-xl border border-slate-800 bg-slate-950 px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-400"
                 />
                 <button
@@ -257,35 +297,38 @@ export const AdminCidades: React.FC = () => {
                   onClick={() => setShowMediaPicker(true)}
                   className="flex items-center gap-1.5 rounded-xl bg-slate-800 px-3 py-2 text-xs font-bold text-white hover:bg-slate-700"
                 >
-                  <Image className="h-4 w-4" /> Mídia
+                  <Image className="h-4 w-4" /> Escolher Foto
                 </button>
               </div>
             </div>
 
+            {/* População */}
             <div className="space-y-1">
-              <label className="text-xs font-semibold text-slate-300">População Estimada</label>
+              <label className="text-xs font-semibold text-slate-200">População Estimada</label>
               <input
                 type="text"
                 value={editingItem.populacao || ''}
                 onChange={(e) => setEditingItem({ ...editingItem, populacao: e.target.value })}
-                placeholder="Ex: 500.000 hab"
+                placeholder="Ex: 433.000 hab. (IBGE)"
                 className="w-full rounded-xl border border-slate-800 bg-slate-950 px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-400"
               />
             </div>
 
-            <div className="sm:col-span-2 space-y-1">
-              <label className="text-xs font-semibold text-slate-300">História da Cidade</label>
-              <textarea
-                value={editingItem.historia || ''}
-                onChange={(e) => setEditingItem({ ...editingItem, historia: e.target.value })}
-                rows={3}
-                placeholder="A história da cidade, fundação e fatos importantes..."
-                className="w-full rounded-xl border border-slate-800 bg-slate-950 px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-400"
-              />
-            </div>
-
+            {/* Distância da Capital */}
             <div className="space-y-1">
-              <label className="text-xs font-semibold text-slate-300">Status de Publicação</label>
+              <label className="text-xs font-semibold text-slate-200">Distância da Capital (km)</label>
+              <input
+                type="text"
+                value={editingItem.distanciaCapital || ''}
+                onChange={(e) => setEditingItem({ ...editingItem, distanciaCapital: e.target.value })}
+                placeholder="Ex: 72 km da capital"
+                className="w-full rounded-xl border border-slate-800 bg-slate-950 px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-400"
+              />
+            </div>
+
+            {/* Status */}
+            <div className="space-y-1">
+              <label className="text-xs font-semibold text-slate-200">Status de Publicação</label>
               <select
                 value={editingItem.status || 'PUBLICADO'}
                 onChange={(e) => setEditingItem({ ...editingItem, status: e.target.value as any })}
@@ -295,6 +338,52 @@ export const AdminCidades: React.FC = () => {
                 <option value="RASCUNHO">RASCUNHO</option>
                 <option value="DESATIVADO">DESATIVADO</option>
               </select>
+            </div>
+
+            {/* História Completa */}
+            <div className="sm:col-span-2 space-y-1">
+              <label className="text-xs font-semibold text-amber-400 flex items-center gap-1">
+                <BookOpen className="h-3.5 w-3.5" /> História & Origem da Cidade (Exibido na Ficha)
+              </label>
+              <textarea
+                value={editingItem.historia || ''}
+                onChange={(e) => setEditingItem({ ...editingItem, historia: e.target.value })}
+                rows={4}
+                placeholder="Detalhes históricos, fundação, ciclos econômicos (café, indústria, turismo)..."
+                className="w-full rounded-xl border border-slate-800 bg-slate-950 px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-400 leading-relaxed"
+              />
+            </div>
+
+            {/* Gastronomia Típica */}
+            <div className="sm:col-span-2 space-y-1">
+              <label className="text-xs font-semibold text-amber-400 flex items-center gap-1">
+                <Utensils className="h-3.5 w-3.5" /> Gastronomia Típica & Pratos Tradicionais
+              </label>
+              <input
+                type="text"
+                value={editingItem.gastronomia || ''}
+                onChange={(e) => setEditingItem({ ...editingItem, gastronomia: e.target.value })}
+                placeholder="Ex: Meca Santista, Frutos do mar, Virado à Paulista, Torta de Morango..."
+                className="w-full rounded-xl border border-slate-800 bg-slate-950 px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-400"
+              />
+            </div>
+
+            {/* Curiosidades */}
+            <div className="sm:col-span-2 space-y-1">
+              <label className="text-xs font-semibold text-amber-400 flex items-center gap-1">
+                <Info className="h-3.5 w-3.5" /> Curiosidades da Cidade (1 por linha)
+              </label>
+              <textarea
+                value={
+                  typeof editingItem.curiosidades === 'string'
+                    ? editingItem.curiosidades
+                    : (editingItem.curiosidades || []).join('\n')
+                }
+                onChange={(e) => setEditingItem({ ...editingItem, curiosidades: e.target.value as any })}
+                rows={3}
+                placeholder="Digite fatos curiosos sobre a cidade (uma frase por linha)..."
+                className="w-full rounded-xl border border-slate-800 bg-slate-950 px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-400"
+              />
             </div>
           </div>
 
@@ -308,27 +397,35 @@ export const AdminCidades: React.FC = () => {
             </button>
             <button
               type="submit"
-              className="rounded-xl bg-amber-500 px-5 py-2 text-xs font-bold text-slate-950 hover:bg-amber-400 transition"
+              className="rounded-xl bg-amber-500 px-6 py-2.5 text-xs font-bold text-slate-950 hover:bg-amber-400 transition shadow-lg shadow-amber-500/20"
             >
-              Salvar Cidade
+              Salvar Alterações da Ficha
             </button>
           </div>
         </form>
       )}
 
-      {/* Cities Grid */}
+      {/* Cities Grid with Clear "Editar Ficha da Cidade" buttons */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
         {filtered.map((city) => (
           <div
             key={city.id}
-            className="rounded-2xl border border-slate-800 bg-slate-900 p-5 space-y-4 flex flex-col justify-between hover:border-slate-700 transition"
+            className="rounded-2xl border border-slate-800 bg-slate-900 p-5 space-y-4 flex flex-col justify-between hover:border-amber-500/40 transition shadow-xl group"
           >
             <div className="space-y-3">
-              <div className="h-40 w-full overflow-hidden rounded-xl bg-slate-950 relative">
-                <img src={city.imagemPrincipal} alt={city.titulo} className="h-full w-full object-cover" />
-                <div className="absolute top-2 left-2 bg-slate-950/80 backdrop-blur-md px-2.5 py-1 rounded-lg border border-slate-800 text-[10px] font-bold text-amber-400 flex items-center gap-1">
+              <div className="h-44 w-full overflow-hidden rounded-xl bg-slate-950 relative">
+                <img src={city.imagemPrincipal} alt={city.titulo} className="h-full w-full object-cover group-hover:scale-105 transition duration-300" />
+                <div className="absolute top-2 left-2 bg-slate-950/85 backdrop-blur-md px-2.5 py-1 rounded-lg border border-slate-800 text-[10px] font-bold text-amber-400 flex items-center gap-1 shadow-md">
                   <MapPin className="h-3 w-3" /> {city.regiaoNome}
                 </div>
+
+                <button
+                  onClick={() => setPreviewCity(city)}
+                  title="Visualizar Ficha como o Visitante Vê"
+                  className="absolute top-2 right-2 bg-slate-950/85 backdrop-blur-md px-2 py-1 rounded-lg border border-slate-800 text-[10px] font-bold text-slate-300 hover:text-white flex items-center gap-1"
+                >
+                  <Eye className="h-3 w-3 text-amber-400" /> Pré-visualizar
+                </button>
               </div>
 
               <div>
@@ -347,39 +444,123 @@ export const AdminCidades: React.FC = () => {
                   </span>
                 </div>
                 <h3 className="font-serif text-lg font-bold text-white mt-1">{city.titulo}</h3>
-                <p className="text-xs text-slate-400 line-clamp-2 mt-1">{city.descricao}</p>
+                <p className="text-xs text-slate-400 line-clamp-2 mt-1 leading-relaxed">{city.descricao}</p>
               </div>
             </div>
 
-            <div className="flex items-center justify-between pt-3 border-t border-slate-800">
+            {/* Prominent Edit Ficha Button */}
+            <div className="space-y-2 pt-2 border-t border-slate-800">
               <button
-                onClick={() => handleDuplicate(city)}
-                title="Duplicar"
-                className="flex items-center gap-1 text-xs text-slate-400 hover:text-amber-400 transition"
+                onClick={() => setEditingItem(city)}
+                className="w-full flex items-center justify-center gap-2 rounded-xl bg-amber-500/10 border border-amber-500/30 py-2 px-3 text-xs font-bold text-amber-400 hover:bg-amber-500/20 hover:border-amber-500/50 transition"
               >
-                <Copy className="h-3.5 w-3.5" /> Duplicar
+                <Edit2 className="h-3.5 w-3.5" /> Editar Ficha da Cidade
               </button>
 
-              <div className="flex items-center gap-2">
+              <div className="flex items-center justify-between text-xs text-slate-400 pt-1">
                 <button
-                  onClick={() => setEditingItem(city)}
-                  title="Editar Cidade e Região"
-                  className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-800 bg-slate-950 text-blue-400 hover:bg-blue-500/20 transition"
+                  onClick={() => handleDuplicate(city)}
+                  title="Duplicar"
+                  className="flex items-center gap-1 hover:text-amber-400 transition text-[11px]"
                 >
-                  <Edit2 className="h-4 w-4" />
+                  <Copy className="h-3 w-3" /> Duplicar
                 </button>
+
                 <button
                   onClick={() => setDeleteConfirmId(city.id)}
                   title="Excluir"
-                  className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-800 bg-slate-950 text-rose-400 hover:bg-rose-500/20 transition"
+                  className="flex items-center gap-1 hover:text-rose-400 transition text-[11px]"
                 >
-                  <Trash2 className="h-4 w-4" />
+                  <Trash2 className="h-3 w-3 text-rose-400" /> Excluir
                 </button>
               </div>
             </div>
           </div>
         ))}
       </div>
+
+      {/* Preview Modal for City Sheet */}
+      {previewCity && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/85 p-4 backdrop-blur-md animate-fade-in">
+          <div className="relative w-full max-w-2xl rounded-3xl border border-amber-500/40 bg-slate-900 p-6 sm:p-8 shadow-2xl max-h-[90vh] overflow-y-auto">
+            <button
+              onClick={() => setPreviewCity(null)}
+              className="absolute right-4 top-4 flex h-8 w-8 items-center justify-center rounded-full bg-slate-800 text-slate-400 hover:text-white"
+            >
+              <X className="h-5 w-5" />
+            </button>
+
+            <div className="flex flex-col sm:flex-row gap-6 items-start">
+              <div className="h-36 w-full sm:w-52 shrink-0 overflow-hidden rounded-2xl border-2 border-amber-500/40 shadow-xl">
+                <img
+                  src={previewCity.imagemPrincipal}
+                  alt={previewCity.titulo}
+                  className="h-full w-full object-cover"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <span className="text-xs font-bold uppercase tracking-widest text-amber-400 bg-amber-500/10 border border-amber-500/20 px-2.5 py-0.5 rounded">
+                  {previewCity.regiaoNome}
+                </span>
+                <h3 className="font-serif text-2xl font-bold text-white">
+                  {previewCity.titulo}
+                </h3>
+                <p className="text-xs text-slate-300 leading-relaxed">
+                  {previewCity.descricao}
+                </p>
+                <div className="flex flex-wrap gap-2 text-[11px] font-mono text-slate-400 pt-1">
+                  <span>População: {previewCity.populacao || 'N/A'}</span>
+                  <span>·</span>
+                  <span>Distância da Capital: {previewCity.distanciaCapital || '0 km'}</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-6 border-t border-slate-800 pt-4 space-y-3">
+              <h4 className="text-xs font-bold uppercase tracking-widest text-slate-400">
+                História & Destaques Culturais
+              </h4>
+              <p className="text-xs text-slate-300 leading-relaxed">
+                {previewCity.historia || 'Nenhuma história cadastrada ainda.'}
+              </p>
+
+              {previewCity.gastronomia && (
+                <div className="rounded-xl bg-slate-950 border border-slate-800 p-3 text-xs text-slate-300">
+                  <strong className="text-amber-400 block mb-1">Gastronomia Típica:</strong>
+                  {previewCity.gastronomia}
+                </div>
+              )}
+
+              {previewCity.curiosidades && previewCity.curiosidades.length > 0 && (
+                <div className="rounded-xl bg-amber-500/10 border border-amber-500/20 p-3">
+                  <div className="flex items-center gap-1.5 text-xs font-bold text-amber-400 mb-1">
+                    <Info className="h-3.5 w-3.5" /> Curiosidades
+                  </div>
+                  <ul className="text-xs text-amber-200/90 list-disc list-inside space-y-1">
+                    {previewCity.curiosidades.map((c, i) => (
+                      <li key={i}>{c}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+
+            <div className="mt-6 flex justify-end gap-3 pt-3 border-t border-slate-800">
+              <button
+                onClick={() => {
+                  const cityToEdit = previewCity;
+                  setPreviewCity(null);
+                  setEditingItem(cityToEdit);
+                }}
+                className="flex items-center gap-2 rounded-xl bg-amber-500 px-4 py-2 text-xs font-bold text-slate-950 hover:bg-amber-400 transition"
+              >
+                <Edit2 className="h-4 w-4" /> Editar Esta Ficha
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <ConfirmModal
         isOpen={Boolean(deleteConfirmId)}

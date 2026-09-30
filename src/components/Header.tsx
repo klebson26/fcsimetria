@@ -24,7 +24,7 @@ import { PWAInstallButton } from './PWAInstallButton';
 interface HeaderProps {
   onOpenSearch: () => void;
   onOpenFairMode: () => void;
-  onOpenQRCodeModal: (topic?: 'geral' | 'paulista' | 'mercadao' | 'liberdade' | 'quiz') => void;
+  onOpenQRCodeModal: (topic?: string) => void;
   onNavigateToAdmin: () => void;
   onNavigateToQuiz: () => void;
   onNavigateToHome?: () => void;
