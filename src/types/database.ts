@@ -216,10 +216,23 @@ export interface ConfigIdentidade {
   textoInstitucional: string;
 }
 
+export interface SlideCustomizadoModoFeira {
+  id: string;
+  categoria: string;
+  titulo: string;
+  subtitulo: string;
+  descricao: string;
+  imagem: string;
+  badge: string;
+  ativo: boolean;
+  ordem: number;
+}
+
 export interface ConfigModoFeira {
   ativo: boolean;
   tempoTransicaoSegundos: number;
   secoesExibidas: string[];
+  slidesCustomizados?: SlideCustomizadoModoFeira[];
   velocidadeAnimacoes: 'Lenta' | 'Normal' | 'Rápida';
   telaCheiaAuto: boolean;
   autoplay: boolean;

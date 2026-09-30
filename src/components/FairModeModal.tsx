@@ -46,74 +46,102 @@ export const FairModeModal: React.FC<FairModeModalProps> = ({ onClose }) => {
   const [progress, setProgress] = useState(0);
 
   useEffect(() => {
-    // Compile slides from active database entities
+    // Compile slides from custom slides and active database entities
     const items: SlideItem[] = [];
+    const activeSections = modoFeiraConfig.secoesExibidas || ['cidades', 'paulista', 'mercadao', 'liberdade', 'culinaria', 'curiosidades'];
+
+    // Custom Slides created in Admin
+    if (modoFeiraConfig.slidesCustomizados && modoFeiraConfig.slidesCustomizados.length > 0) {
+      modoFeiraConfig.slidesCustomizados
+        .filter((s) => s.ativo)
+        .forEach((s) => {
+          items.push({
+            id: s.id,
+            categoria: s.categoria || 'FEIRA CULTURAL',
+            titulo: s.titulo,
+            subtitulo: s.subtitulo,
+            descricao: s.descricao,
+            imagem: s.imagem,
+            badge: s.badge || 'DESTAQUE'
+          });
+        });
+    }
 
     // Cities
-    const cidades = getCidades().filter((c) => c.status === 'PUBLICADO');
-    cidades.forEach((c) => {
-      items.push({
-        id: c.id,
-        categoria: 'CIDADE PAULISTA',
-        titulo: c.titulo,
-        subtitulo: c.regiaoNome,
-        descricao: c.descricao,
-        imagem: c.imagemPrincipal,
-        badge: `População: ${c.populacao || 'N/A'}`
+    if (activeSections.includes('cidades')) {
+      const cidades = getCidades().filter((c) => c.status === 'PUBLICADO');
+      cidades.forEach((c) => {
+        items.push({
+          id: c.id,
+          categoria: 'CIDADE PAULISTA',
+          titulo: c.titulo,
+          subtitulo: c.regiaoNome,
+          descricao: c.descricao,
+          imagem: c.imagemPrincipal,
+          badge: `População: ${c.populacao || 'N/A'}`
+        });
       });
-    });
+    }
 
     // Paulista
-    const paulista = getPaulistaContent();
-    items.push({
-      id: paulista.id,
-      categoria: 'ESPECIAL AV. PAULISTA',
-      titulo: paulista.titulo,
-      subtitulo: paulista.subtitulo,
-      descricao: paulista.descricao,
-      imagem: paulista.imagemPrincipal,
-      badge: 'Coração Cultural de SP'
-    });
+    if (activeSections.includes('paulista')) {
+      const paulista = getPaulistaContent();
+      items.push({
+        id: paulista.id,
+        categoria: 'ESPECIAL AV. PAULISTA',
+        titulo: paulista.titulo,
+        subtitulo: paulista.subtitulo,
+        descricao: paulista.descricao,
+        imagem: paulista.imagemPrincipal,
+        badge: 'Coração Cultural de SP'
+      });
+    }
 
     // Liberdade
-    const liberdade = getLiberdadeContent();
-    items.push({
-      id: liberdade.id,
-      categoria: 'BAIRRO DA LIBERDADE',
-      titulo: liberdade.titulo,
-      subtitulo: liberdade.subtitulo,
-      descricao: liberdade.descricao,
-      imagem: liberdade.imagemPrincipal,
-      badge: 'Cultura Asiática'
-    });
+    if (activeSections.includes('liberdade')) {
+      const liberdade = getLiberdadeContent();
+      items.push({
+        id: liberdade.id,
+        categoria: 'BAIRRO DA LIBERDADE',
+        titulo: liberdade.titulo,
+        subtitulo: liberdade.subtitulo,
+        descricao: liberdade.descricao,
+        imagem: liberdade.imagemPrincipal,
+        badge: 'Cultura Asiática'
+      });
+    }
 
     // Culinária
-    const culinaria = getCulinaria().filter((c) => c.status === 'PUBLICADO');
-    culinaria.forEach((c) => {
-      items.push({
-        id: c.id,
-        categoria: 'GASTRONOMIA PAULISTA',
-        titulo: c.titulo,
-        subtitulo: c.cidadeOuRegiao,
-        descricao: c.descricao,
-        imagem: c.imagemPrincipal,
-        badge: c.categoria
+    if (activeSections.includes('culinaria')) {
+      const culinaria = getCulinaria().filter((c) => c.status === 'PUBLICADO');
+      culinaria.forEach((c) => {
+        items.push({
+          id: c.id,
+          categoria: 'GASTRONOMIA PAULISTA',
+          titulo: c.titulo,
+          subtitulo: c.cidadeOuRegiao,
+          descricao: c.descricao,
+          imagem: c.imagemPrincipal,
+          badge: c.categoria
+        });
       });
-    });
+    }
 
     // Curiosidades
-    const curiosidades = getCuriosidades().filter((c) => c.status === 'PUBLICADO');
-    curiosidades.forEach((c) => {
-      items.push({
-        id: c.id,
-        categoria: 'VOCÊ SABIA?',
-        titulo: c.pergunta,
-        subtitulo: c.cidadeOuRegiao,
-        descricao: c.resposta,
-        imagem: c.imagem || '/images/sp_hero_banner_1790701710531.jpg',
-        badge: c.categoria
+    if (activeSections.includes('curiosidades')) {
+      const curiosidades = getCuriosidades().filter((c) => c.status === 'PUBLICADO');
+      curiosidades.forEach((c) => {
+        items.push({
+          id: c.id,
+          categoria: 'VOCÊ SABIA?',
+          titulo: c.pergunta,
+          subtitulo: c.cidadeOuRegiao,
+          descricao: c.resposta,
+          imagem: c.imagem || '/images/sp_hero_banner_1790701710531.jpg',
+          badge: c.categoria
+        });
       });
-    });
+    }
 
     setSlides(items);
   }, []);
