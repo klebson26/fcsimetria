@@ -46,6 +46,9 @@ import {
   INITIAL_MEDIA
 } from '../data/initialData';
 
+import { db } from '../firebase';
+import { doc, getDoc, setDoc, onSnapshot } from 'firebase/firestore';
+
 const KEYS = {
   REGIOES: 'simetria_sp_regioes',
   CIDADES: 'simetria_sp_cidades',
@@ -102,14 +105,45 @@ function getItem<T>(key: string, defaultValue: T): T {
   }
 }
 
+const KEY_TO_FIRESTORE_DOC: Record<string, string> = {
+  [KEYS.REGIOES]: 'regioes',
+  [KEYS.CIDADES]: 'cidades',
+  [KEYS.PONTOS]: 'pontos',
+  [KEYS.PAULISTA]: 'paulista',
+  [KEYS.MERCADAO]: 'mercadao',
+  [KEYS.LIBERDADE]: 'liberdade',
+  [KEYS.CULINARIA]: 'culinaria',
+  [KEYS.ARTESANATO]: 'artesanato',
+  [KEYS.CULTURA]: 'cultura',
+  [KEYS.HISTORIA]: 'historia',
+  [KEYS.CURIOSIDADES]: 'curiosidades',
+  [KEYS.QUIZ]: 'quiz',
+  [KEYS.MENU]: 'menu',
+  [KEYS.BANNERS]: 'banners',
+  [KEYS.SECOES]: 'secoes',
+  [KEYS.APARENCIA]: 'aparencia',
+  [KEYS.IDENTIDADE]: 'identidade',
+  [KEYS.MODO_FEIRA]: 'modo_feira',
+  [KEYS.MEDIA]: 'media'
+};
+
 function setItem<T>(key: string, value: T) {
   try {
     localStorage.setItem(key, JSON.stringify(value));
     notifySubscribers();
+
+    // Async push to Firestore
+    const docName = KEY_TO_FIRESTORE_DOC[key];
+    if (docName) {
+      setDoc(doc(db, 'feira_dados', docName), { payload: value, updatedAt: new Date().toISOString() })
+        .catch((err) => console.warn(`Firestore sync warning for ${docName}:`, err));
+    }
   } catch (err) {
     console.error(`Error writing ${key} to localStorage:`, err);
   }
 }
+
+let isFirestoreListening = false;
 
 // Initializer
 export function initStorage() {
@@ -135,6 +169,52 @@ export function initStorage() {
     localStorage.setItem(KEYS.ADMINS, JSON.stringify(INITIAL_ADMINS));
     localStorage.setItem(KEYS.LOGS, JSON.stringify(INITIAL_LOGS));
     localStorage.setItem(KEYS.MEDIA, JSON.stringify(INITIAL_MEDIA));
+  }
+
+  // Real-time synchronization with cloud Firestore
+  if (!isFirestoreListening) {
+    isFirestoreListening = true;
+    Object.entries(KEY_TO_FIRESTORE_DOC).forEach(([storageKey, docName]) => {
+      try {
+        const docRef = doc(db, 'feira_dados', docName);
+        onSnapshot(
+          docRef,
+          (snapshot) => {
+            if (snapshot.exists()) {
+              const data = snapshot.data();
+              if (data && data.payload !== undefined) {
+                const localStr = localStorage.getItem(storageKey);
+                const incomingStr = JSON.stringify(data.payload);
+                if (localStr !== incomingStr) {
+                  localStorage.setItem(storageKey, incomingStr);
+                  notifySubscribers();
+                }
+              }
+            } else {
+              // Automatically seed Firestore with initial data
+              const localData = localStorage.getItem(storageKey);
+              if (localData) {
+                try {
+                  const parsed = JSON.parse(localData);
+                  setDoc(docRef, { payload: parsed, updatedAt: new Date().toISOString() }).catch(() => {});
+                } catch {
+                  // ignore
+                }
+              }
+            }
+          },
+          (err) => {
+            if (err.code === 'unavailable') {
+              console.debug(`Firestore operating in offline mode for ${docName}`);
+            } else {
+              console.warn(`Firestore listener for ${docName} paused:`, err);
+            }
+          }
+        );
+      } catch (err) {
+        console.warn(`Error setting up Firestore listener for ${docName}:`, err);
+      }
+    });
   }
 }
 

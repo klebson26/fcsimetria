@@ -18,25 +18,67 @@ export const AdminMedia: React.FC = () => {
     });
   }, []);
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
+  const compressImage = (file: File): Promise<{ url: string; sizeKb: number }> => {
+    return new Promise((resolve) => {
       const reader = new FileReader();
       reader.onload = (evt) => {
-        const url = evt.target?.result as string;
-        const newMedia: MediaItem = {
-          id: 'med_' + Date.now(),
-          nome: file.name.replace(/\.[^/.]+$/, ''),
-          url: url,
-          tamanhoKb: Math.round(file.size / 1024),
-          formato: (file.name.split('.').pop()?.toUpperCase() as any) || 'JPG',
-          categoria: 'Upload Local',
-          textoAlternativo: file.name,
-          dataUpload: new Date().toISOString()
+        const rawUrl = evt.target?.result as string;
+        const img = new window.Image();
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          const MAX_SIZE = 1200;
+          let width = img.width;
+          let height = img.height;
+
+          if (width > height) {
+            if (width > MAX_SIZE) {
+              height = Math.round((height * MAX_SIZE) / width);
+              width = MAX_SIZE;
+            }
+          } else {
+            if (height > MAX_SIZE) {
+              width = Math.round((width * MAX_SIZE) / height);
+              height = MAX_SIZE;
+            }
+          }
+
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          if (ctx) {
+            ctx.drawImage(img, 0, 0, width, height);
+            const compressed = canvas.toDataURL('image/jpeg', 0.82);
+            const sizeKb = Math.round((compressed.length * 3) / 4 / 1024);
+            resolve({ url: compressed, sizeKb });
+            return;
+          }
+          resolve({ url: rawUrl, sizeKb: Math.round(file.size / 1024) });
         };
-        saveMediaItem(newMedia);
+        img.onerror = () => resolve({ url: rawUrl, sizeKb: Math.round(file.size / 1024) });
+        img.src = rawUrl;
       };
+      reader.onerror = () => resolve({ url: '', sizeKb: 0 });
       reader.readAsDataURL(file);
+    });
+  };
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const { url, sizeKb } = await compressImage(file);
+      if (!url) return;
+
+      const newMedia: MediaItem = {
+        id: 'med_' + Date.now(),
+        nome: file.name.replace(/\.[^/.]+$/, ''),
+        url: url,
+        tamanhoKb: sizeKb,
+        formato: 'JPG',
+        categoria: 'Upload Local',
+        textoAlternativo: file.name,
+        dataUpload: new Date().toISOString()
+      };
+      saveMediaItem(newMedia);
     }
   };
 

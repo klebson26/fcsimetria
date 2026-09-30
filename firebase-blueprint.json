@@ -1,0 +1,120 @@
+{
+  "entities": {
+    "IdentidadeEscola": {
+      "title": "Identidade Escolar e da Feira",
+      "description": "Informações institucionais do Colégio Simetria e configuração da Feira Cultural",
+      "type": "object",
+      "properties": {
+        "nomeColegio": { "type": "string" },
+        "slogan": { "type": "string" },
+        "nomeFeira": { "type": "string" },
+        "tema": { "type": "string" },
+        "dataInicio": { "type": "string" },
+        "dataFim": { "type": "string" },
+        "local": { "type": "string" },
+        "descricaoGeral": { "type": "string" },
+        "logoUrl": { "type": "string" },
+        "bannerPrincipalUrl": { "type": "string" },
+        "corPrimaria": { "type": "string" },
+        "corSecundaria": { "type": "string" }
+      },
+      "required": ["nomeColegio", "nomeFeira", "tema"]
+    },
+    "CidadeSP": {
+      "title": "Cidade do Estado de São Paulo",
+      "description": "Dados da cidade paulista exposta na feira cultural",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "nome": { "type": "string" },
+        "regiao": { "type": "string" },
+        "populacao": { "type": "string" },
+        "distanciaCapitalKm": { "type": "number" },
+        "descricao": { "type": "string" },
+        "imagemPrincipal": { "type": "string" },
+        "destaque": { "type": "boolean" },
+        "curiosidades": { "type": "array" }
+      },
+      "required": ["id", "nome", "regiao"]
+    },
+    "PontoTuristico": {
+      "title": "Ponto Turístico Paulista",
+      "description": "Atrações e marcos turísticos de São Paulo",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "nome": { "type": "string" },
+        "categoria": { "type": "string" },
+        "cidade": { "type": "string" },
+        "descricao": { "type": "string" },
+        "imagemPrincipal": { "type": "string" },
+        "destaque": { "type": "boolean" }
+      },
+      "required": ["id", "nome", "categoria"]
+    },
+    "ItemGenericoFeira": {
+      "title": "Item Cultural da Feira",
+      "description": "Item exposto (Mercadão, Culinária, História, Artesanato, Cultura ou Banners)",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "titulo": { "type": "string" },
+        "descricao": { "type": "string" },
+        "categoria": { "type": "string" },
+        "imagem": { "type": "string" },
+        "status": { "type": "string" }
+      },
+      "required": ["id", "titulo"]
+    }
+  },
+  "firestore": {
+    "/identidade/{docId}": {
+      "schema": "IdentidadeEscola",
+      "description": "Configuração da identidade visual e dados gerais da feira"
+    },
+    "/cidades/{cidadeId}": {
+      "schema": "CidadeSP",
+      "description": "Coleção de cidades representadas na feira"
+    },
+    "/pontos_turisticos/{pontoId}": {
+      "schema": "PontoTuristico",
+      "description": "Coleção de pontos turísticos de São Paulo"
+    },
+    "/mercadao/{itemId}": {
+      "schema": "ItemGenericoFeira",
+      "description": "Itens e boxes inspirados no Mercado Municipal de SP"
+    },
+    "/culinaria/{itemId}": {
+      "schema": "ItemGenericoFeira",
+      "description": "Pratos típicos e gastronomia paulista"
+    },
+    "/historia/{itemId}": {
+      "schema": "ItemGenericoFeira",
+      "description": "Marcos históricos e personagens de São Paulo"
+    },
+    "/artesanato/{itemId}": {
+      "schema": "ItemGenericoFeira",
+      "description": "Manifestações artesanais paulistas"
+    },
+    "/cultura/{itemId}": {
+      "schema": "ItemGenericoFeira",
+      "description": "Tradições, festas folclóricas e música de SP"
+    },
+    "/banners/{bannerId}": {
+      "schema": "ItemGenericoFeira",
+      "description": "Banners de destaque do carrossel inicial"
+    },
+    "/quiz/{perguntaId}": {
+      "schema": "ItemGenericoFeira",
+      "description": "Perguntas e respostas do Quiz Cultural Simetria"
+    },
+    "/duvidas/{duvidaId}": {
+      "schema": "ItemGenericoFeira",
+      "description": "Dúvidas e mensagens enviadas pelos visitantes e alunos"
+    },
+    "/midias/{midiaId}": {
+      "schema": "ItemGenericoFeira",
+      "description": "Galeria de mídias e fotos enviadas pelo painel"
+    }
+  }
+}
