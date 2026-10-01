@@ -8,27 +8,28 @@ import {
   subscribeStorage,
   getAuthSession
 } from '../services/storageService';
+import { playClickSound } from '../services/audioService';
 import { FotoMural } from '../types/database';
 import {
   Camera,
   Heart,
-  Upload,
   ArrowLeft,
   Share2,
   Check,
   QrCode,
   Sparkles,
-  Users,
   Image as ImageIcon,
   X,
   MapPin,
   Clock,
-  Filter,
   Trash2,
   Download,
   Maximize2,
-  Smile,
-  Send
+  Send,
+  RefreshCw,
+  RotateCcw,
+  Timer,
+  AlertCircle
 } from 'lucide-react';
 
 interface MuralFotosPageProps {
@@ -42,22 +43,31 @@ export const MuralFotosPage: React.FC<MuralFotosPageProps> = ({
 }) => {
   const [fotos, setFotos] = useState<FotoMural[]>(getMuralFotos());
   const [identidade, setIdentidade] = useState(getIdentidade());
-  const [isUploadOpen, setIsUploadOpen] = useState(false);
+  const [isCameraModalOpen, setIsCameraModalOpen] = useState(false);
   const [copied, setCopied] = useState(false);
   const [selectedPhoto, setSelectedPhoto] = useState<FotoMural | null>(null);
   const [activeFilter, setActiveFilter] = useState<string>('TODAS');
   const [searchQuery, setSearchQuery] = useState('');
   const session = getAuthSession();
 
-  // Form states for new photo upload
+  // Camera States
+  const [isCameraActive, setIsCameraActive] = useState(false);
+  const [facingMode, setFacingMode] = useState<'user' | 'environment'>('user');
+  const [cameraError, setCameraError] = useState<string | null>(null);
+  const [countdown, setCountdown] = useState<number | null>(null);
+  const [previewImage, setPreviewImage] = useState<string | null>(null);
+  const [flashAnimation, setFlashAnimation] = useState(false);
+
+  // Form States
   const [formNome, setFormNome] = useState('');
   const [formRelacao, setFormRelacao] = useState('Visitante');
   const [formLocal, setFormLocal] = useState('Área Geral');
   const [formMensagem, setFormMensagem] = useState('');
-  const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [feedbackSuccess, setFeedbackSuccess] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -67,50 +77,167 @@ export const MuralFotosPage: React.FC<MuralFotosPageProps> = ({
     });
   }, []);
 
-  const handleCopyLink = () => {
-    const url = window.location.origin + window.location.pathname + '#mural';
-    navigator.clipboard.writeText(url);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2500);
+  // Stop camera stream when component unmounts
+  useEffect(() => {
+    return () => {
+      stopCamera();
+    };
+  }, []);
+
+  // Handle camera activation when modal opens
+  useEffect(() => {
+    if (isCameraModalOpen && !previewImage) {
+      startCamera(facingMode);
+    } else {
+      stopCamera();
+    }
+  }, [isCameraModalOpen, previewImage]);
+
+  const startCamera = async (mode: 'user' | 'environment') => {
+    stopCamera();
+    setCameraError(null);
+    try {
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        throw new Error('Navegador não suporta captura direta de câmera.');
+      }
+
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: {
+          facingMode: mode,
+          width: { ideal: 1280 },
+          height: { ideal: 960 }
+        },
+        audio: false
+      });
+
+      streamRef.current = stream;
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        videoRef.current.play();
+      }
+      setIsCameraActive(true);
+    } catch (err: any) {
+      console.warn('Tentativa com facingMode falhou, tentando fallback genérico:', err);
+      try {
+        const fallbackStream = await navigator.mediaDevices.getUserMedia({
+          video: true,
+          audio: false
+        });
+        streamRef.current = fallbackStream;
+        if (videoRef.current) {
+          videoRef.current.srcObject = fallbackStream;
+          videoRef.current.play();
+        }
+        setIsCameraActive(true);
+      } catch (fallbackErr: any) {
+        console.error('Erro final ao acessar câmera:', fallbackErr);
+        const isDenied =
+          fallbackErr.name === 'NotAllowedError' || fallbackErr.name === 'PermissionDeniedError';
+        setCameraError(
+          isDenied
+            ? 'Acesso à câmera foi bloqueado. Por favor, autorize a câmera nas permissões do seu navegador para tirar fotos na feira.'
+            : 'Não foi possível iniciar a câmera do dispositivo. Verifique se a câmera está conectada e não está em uso por outro aplicativo.'
+        );
+        setIsCameraActive(false);
+      }
+    }
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  const stopCamera = () => {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((track) => track.stop());
+      streamRef.current = null;
+    }
+    if (videoRef.current) {
+      videoRef.current.srcObject = null;
+    }
+    setIsCameraActive(false);
+  };
 
-    // Read and compress file as base64 data URL
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      const img = new Image();
-      img.onload = () => {
-        // Resize image to max 1280px to keep localStorage light and fast
-        const canvas = document.createElement('canvas');
-        const maxDimension = 1280;
-        let width = img.width;
-        let height = img.height;
+  const handleSwitchCamera = () => {
+    playClickSound();
+    const nextMode = facingMode === 'user' ? 'environment' : 'user';
+    setFacingMode(nextMode);
+    startCamera(nextMode);
+  };
 
-        if (width > maxDimension || height > maxDimension) {
-          if (width > height) {
-            height = Math.round((height * maxDimension) / width);
-            width = maxDimension;
-          } else {
-            width = Math.round((width * maxDimension) / height);
-            height = maxDimension;
-          }
+  const handleCapturePhoto = () => {
+    if (!videoRef.current) return;
+    const video = videoRef.current;
+    if (video.videoWidth === 0 || video.videoHeight === 0) return;
+
+    playClickSound();
+
+    // Trigger visual flash
+    setFlashAnimation(true);
+    setTimeout(() => setFlashAnimation(false), 200);
+
+    const canvas = document.createElement('canvas');
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    // Mirror selfie mode if front camera
+    if (facingMode === 'user') {
+      ctx.translate(canvas.width, 0);
+      ctx.scale(-1, 1);
+    }
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+    // Reset transform for watermark overlay
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+
+    // School official watermark band
+    const bannerHeight = Math.max(48, Math.round(canvas.height * 0.08));
+    ctx.fillStyle = 'rgba(2, 6, 23, 0.85)';
+    ctx.fillRect(0, canvas.height - bannerHeight, canvas.width, bannerHeight);
+
+    ctx.fillStyle = '#f59e0b';
+    ctx.font = `bold ${Math.max(14, Math.round(bannerHeight * 0.38))}px sans-serif`;
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'middle';
+    const textLeft = Math.round(canvas.width * 0.04);
+    ctx.fillText(
+      `${identidade.nomeColegio.toUpperCase()} • ${identidade.nomeFeira.toUpperCase()} ${identidade.anoFeira || '2026'}`,
+      textLeft,
+      canvas.height - bannerHeight / 2
+    );
+
+    const dataUrl = canvas.toDataURL('image/jpeg', 0.88);
+    setPreviewImage(dataUrl);
+    stopCamera();
+  };
+
+  const handleStartTimerCapture = () => {
+    if (countdown !== null) return;
+    setCountdown(3);
+    const interval = setInterval(() => {
+      setCountdown((prev) => {
+        if (prev === null || prev <= 1) {
+          clearInterval(interval);
+          setTimeout(() => {
+            handleCapturePhoto();
+            setCountdown(null);
+          }, 300);
+          return null;
         }
+        return prev - 1;
+      });
+    }, 1000);
+  };
 
-        canvas.width = width;
-        canvas.height = height;
-        const ctx = canvas.getContext('2d');
-        if (ctx) {
-          ctx.drawImage(img, 0, 0, width, height);
-          const compressed = canvas.toDataURL('image/jpeg', 0.85);
-          setPreviewImage(compressed);
-        }
-      };
-      img.src = event.target?.result as string;
-    };
-    reader.readAsDataURL(file);
+  const handleRetakePhoto = () => {
+    playClickSound();
+    setPreviewImage(null);
+    startCamera(facingMode);
+  };
+
+  const handleCloseModal = () => {
+    stopCamera();
+    setPreviewImage(null);
+    setCountdown(null);
+    setIsCameraModalOpen(false);
   };
 
   const handleSubmitPhoto = (e: React.FormEvent) => {
@@ -132,9 +259,9 @@ export const MuralFotosPage: React.FC<MuralFotosPageProps> = ({
       setFormNome('');
       setFormMensagem('');
       setPreviewImage(null);
-      setIsUploadOpen(false);
+      setIsCameraModalOpen(false);
       setFeedbackSuccess(true);
-      setTimeout(() => setFeedbackSuccess(false), 4000);
+      setTimeout(() => setFeedbackSuccess(false), 4500);
     } catch (err) {
       console.error('Erro ao enviar foto:', err);
     } finally {
@@ -157,17 +284,22 @@ export const MuralFotosPage: React.FC<MuralFotosPageProps> = ({
     }
   };
 
+  const handleCopyLink = () => {
+    const url = window.location.origin + window.location.pathname + '#mural';
+    navigator.clipboard.writeText(url);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2500);
+  };
+
   const totalCurtidas = fotos.reduce((acc, f) => acc + (f.curtidas || 0), 0);
 
   // Filters
   const filteredFotos = fotos.filter((f) => {
-    // Local filter
     if (activeFilter === 'PAULISTA' && f.localFeira !== 'Estande Av. Paulista') return false;
     if (activeFilter === 'MERCADAO' && f.localFeira !== 'Mercadão Municipal') return false;
     if (activeFilter === 'LIBERDADE' && f.localFeira !== 'Bairro da Liberdade') return false;
     if (activeFilter === 'DESTAQUES' && !f.destaque) return false;
 
-    // Search query
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
       const matchName = f.autorNome.toLowerCase().includes(q);
@@ -183,7 +315,11 @@ export const MuralFotosPage: React.FC<MuralFotosPageProps> = ({
   const formatData = (iso: string) => {
     try {
       const date = new Date(iso);
-      return date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) + ' · ' + date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+      return (
+        date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) +
+        ' · ' +
+        date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })
+      );
     } catch {
       return 'Agora';
     }
@@ -204,11 +340,11 @@ export const MuralFotosPage: React.FC<MuralFotosPageProps> = ({
 
           <div className="flex items-center gap-2">
             <button
-              onClick={() => setIsUploadOpen(true)}
+              onClick={() => setIsCameraModalOpen(true)}
               className="flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 px-3.5 py-1.5 text-xs font-bold text-slate-950 shadow-md shadow-amber-500/20 hover:from-amber-400 hover:to-amber-500 transition"
             >
               <Camera className="h-4 w-4 fill-slate-950" />
-              <span>Publicar Minha Foto</span>
+              <span>Abrir Câmera & Tirar Foto</span>
             </button>
 
             <button
@@ -246,7 +382,7 @@ export const MuralFotosPage: React.FC<MuralFotosPageProps> = ({
               </h1>
 
               <p className="text-sm sm:text-base text-slate-300 leading-relaxed max-w-2xl">
-                Tire uma selfie ou foto nos estandes, registre seu momento em família ou com sua turma e faça parte da galeria oficial do {identidade.nomeColegio}!
+                Tire sua foto diretamente com a câmera do celular nos estandes da feira, registre seu momento em família ou com sua turma e faça parte do mural oficial do {identidade.nomeColegio}!
               </p>
 
               {/* Stats badges */}
@@ -264,19 +400,19 @@ export const MuralFotosPage: React.FC<MuralFotosPageProps> = ({
                     <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
                     <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
                   </span>
-                  <span>Mural ao vivo</span>
+                  <span>Câmera e Mural ao Vivo</span>
                 </div>
               </div>
             </div>
 
-            {/* Big Action CTA */}
+            {/* Direct Camera Shutter Trigger Button */}
             <div className="shrink-0 flex flex-col sm:flex-row gap-3">
               <button
-                onClick={() => setIsUploadOpen(true)}
-                className="flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-amber-500 to-amber-600 px-6 py-3.5 text-sm font-bold text-slate-950 shadow-xl shadow-amber-500/25 hover:from-amber-400 hover:to-amber-500 transition active:scale-98"
+                onClick={() => setIsCameraModalOpen(true)}
+                className="flex items-center justify-center gap-2.5 rounded-2xl bg-gradient-to-r from-amber-500 to-amber-600 px-7 py-4 text-sm font-bold text-slate-950 shadow-xl shadow-amber-500/25 hover:from-amber-400 hover:to-amber-500 transition active:scale-98"
               >
                 <Camera className="h-5 w-5 fill-slate-950" />
-                <span>Tirar ou Enviar Minha Foto</span>
+                <span>Abrir Câmera & Tirar Foto Agora</span>
               </button>
             </div>
           </div>
@@ -292,8 +428,8 @@ export const MuralFotosPage: React.FC<MuralFotosPageProps> = ({
                 <Check className="h-5 w-5" />
               </div>
               <div>
-                <h4 className="font-bold text-sm">Foto publicada no Mural com sucesso!</h4>
-                <p className="text-xs text-emerald-400/90">Sua lembrança já está visível para todos os visitantes da feira cultural.</p>
+                <h4 className="font-bold text-sm">Foto publicada com sucesso no Mural!</h4>
+                <p className="text-xs text-emerald-400/90">Sua foto já está disponível ao vivo para todos os visitantes da feira.</p>
               </div>
             </div>
             <button
@@ -310,7 +446,6 @@ export const MuralFotosPage: React.FC<MuralFotosPageProps> = ({
       <main className="mx-auto max-w-7xl px-4 py-8 space-y-6">
         {/* Filters and Search Bar */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800 pb-4">
-          {/* Filter Pills */}
           <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0 scrollbar-none">
             {[
               { id: 'TODAS', label: 'Todas as Fotos' },
@@ -333,7 +468,6 @@ export const MuralFotosPage: React.FC<MuralFotosPageProps> = ({
             ))}
           </div>
 
-          {/* Search box */}
           <div className="relative w-full sm:w-64 shrink-0">
             <input
               type="text"
@@ -361,14 +495,14 @@ export const MuralFotosPage: React.FC<MuralFotosPageProps> = ({
             </div>
             <h3 className="font-serif text-xl font-bold text-white">Nenhuma foto encontrada</h3>
             <p className="text-xs text-slate-400 max-w-md mx-auto">
-              Seja o primeiro a publicar uma foto ou ajuste os filtros acima!
+              Seja o primeiro a abrir a câmera e tirar uma foto para o mural!
             </p>
             <button
-              onClick={() => setIsUploadOpen(true)}
+              onClick={() => setIsCameraModalOpen(true)}
               className="inline-flex items-center gap-2 rounded-xl bg-amber-500 px-5 py-2.5 text-xs font-bold text-slate-950 hover:bg-amber-400 transition"
             >
               <Camera className="h-4 w-4" />
-              <span>Publicar Foto Agora</span>
+              <span>Abrir Câmera</span>
             </button>
           </div>
         ) : (
@@ -379,7 +513,6 @@ export const MuralFotosPage: React.FC<MuralFotosPageProps> = ({
                 onClick={() => setSelectedPhoto(item)}
                 className="group relative flex flex-col overflow-hidden rounded-2xl border border-slate-800/80 bg-slate-900/90 shadow-xl hover:border-amber-500/50 hover:shadow-amber-500/10 transition cursor-pointer"
               >
-                {/* Photo container */}
                 <div className="relative aspect-4/3 sm:aspect-square w-full overflow-hidden bg-slate-950">
                   <img
                     src={item.fotoUrl}
@@ -388,7 +521,6 @@ export const MuralFotosPage: React.FC<MuralFotosPageProps> = ({
                     loading="lazy"
                   />
 
-                  {/* Top badges on photo */}
                   <div className="absolute top-3 left-3 right-3 flex items-center justify-between pointer-events-none">
                     {item.localFeira && (
                       <span className="rounded-full bg-slate-950/80 backdrop-blur-md px-2.5 py-0.5 text-[10px] font-bold text-amber-300 border border-amber-500/30">
@@ -403,7 +535,6 @@ export const MuralFotosPage: React.FC<MuralFotosPageProps> = ({
                     )}
                   </div>
 
-                  {/* Hover overlay hint */}
                   <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition flex items-end p-3 pointer-events-none">
                     <span className="text-[11px] font-semibold text-white flex items-center gap-1">
                       <Maximize2 className="h-3.5 w-3.5" /> Ampliar foto
@@ -411,7 +542,6 @@ export const MuralFotosPage: React.FC<MuralFotosPageProps> = ({
                   </div>
                 </div>
 
-                {/* Card Info & Caption */}
                 <div className="p-4 flex-1 flex flex-col justify-between space-y-3">
                   <div className="space-y-1.5">
                     <div className="flex items-center justify-between gap-2">
@@ -428,7 +558,6 @@ export const MuralFotosPage: React.FC<MuralFotosPageProps> = ({
                     </p>
                   </div>
 
-                  {/* Card Footer: Timestamp & Like button */}
                   <div className="pt-2 border-t border-slate-800/80 flex items-center justify-between text-xs">
                     <span className="text-[10px] font-mono text-slate-500 flex items-center gap-1">
                       <Clock className="h-3 w-3" /> {formatData(item.dataCriacao)}
@@ -462,163 +591,245 @@ export const MuralFotosPage: React.FC<MuralFotosPageProps> = ({
         )}
       </main>
 
-      {/* ================= UPLOAD / CAMERA MODAL ================= */}
-      {isUploadOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/85 backdrop-blur-md p-4 overflow-y-auto animate-fade-in">
-          <div className="relative w-full max-w-lg rounded-3xl border border-slate-800 bg-slate-900 p-6 sm:p-8 shadow-2xl space-y-6 my-8">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-4">
+      {/* ================= REAL CAMERA VIEWFINDER & CAPTURE MODAL ================= */}
+      {isCameraModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/90 backdrop-blur-md p-3 sm:p-4 overflow-y-auto animate-fade-in">
+          <div className="relative w-full max-w-xl rounded-3xl border border-slate-800 bg-slate-900 shadow-2xl overflow-hidden my-4">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between border-b border-slate-800 px-5 py-4 bg-slate-900/90">
               <div className="flex items-center gap-2.5">
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-500/10 text-amber-400 border border-amber-500/30">
-                  <Camera className="h-5 w-5" />
+                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-500/10 text-amber-400 border border-amber-500/30">
+                  <Camera className="h-4 w-4" />
                 </div>
                 <div>
-                  <h3 className="font-serif text-lg font-bold text-white">Publicar no Mural da Feira</h3>
-                  <p className="text-xs text-slate-400">Compartilhe sua lembrança com todos os visitantes</p>
+                  <h3 className="font-serif text-base font-bold text-white leading-tight">
+                    {previewImage ? 'Confirmar e Publicar Foto' : 'Câmera da Feira Cultural'}
+                  </h3>
+                  <p className="text-[11px] text-slate-400">
+                    {previewImage ? 'Revise sua foto e adicione seu nome' : 'Enquadre o momento e aperte o botão de disparo'}
+                  </p>
                 </div>
               </div>
               <button
-                onClick={() => setIsUploadOpen(false)}
+                onClick={handleCloseModal}
                 className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-800 text-slate-400 hover:text-white hover:border-slate-700"
               >
                 <X className="h-4 w-4" />
               </button>
             </div>
 
-            <form onSubmit={handleSubmitPhoto} className="space-y-4">
-              {/* Photo Upload / Capture preview */}
-              <div className="space-y-2">
-                <label className="text-xs font-semibold text-slate-300 block">
-                  Foto da Feira <span className="text-amber-400">*</span>
-                </label>
+            {/* Camera Viewfinder OR Captured Preview */}
+            <div className="p-4 sm:p-6 space-y-4">
+              {!previewImage ? (
+                /* LIVE CAMERA VIEWFINDER */
+                <div className="space-y-4">
+                  <div className="relative aspect-4/3 w-full rounded-2xl overflow-hidden bg-black border-2 border-slate-800 shadow-inner flex items-center justify-center">
+                    {/* Live Video Element */}
+                    <video
+                      ref={videoRef}
+                      autoPlay
+                      playsInline
+                      muted
+                      className={`h-full w-full object-cover transition-transform ${
+                        facingMode === 'user' ? 'scale-x-[-1]' : ''
+                      }`}
+                    />
 
-                {previewImage ? (
-                  <div className="relative rounded-2xl overflow-hidden border-2 border-amber-500/50 aspect-4/3 bg-slate-950">
-                    <img src={previewImage} alt="Prévia" className="h-full w-full object-cover" />
-                    
-                    {/* Simulated cultural fair official badge watermark */}
-                    <div className="absolute bottom-2 left-2 right-2 rounded-xl bg-slate-950/80 backdrop-blur-md px-3 py-1.5 text-center text-[10px] font-bold text-amber-300 border border-amber-500/30">
+                    {/* Camera Flash Animation */}
+                    {flashAnimation && (
+                      <div className="absolute inset-0 bg-white z-40 animate-fade-out" />
+                    )}
+
+                    {/* Countdown Overlay (3, 2, 1) */}
+                    {countdown !== null && (
+                      <div className="absolute inset-0 z-30 flex items-center justify-center bg-black/50 backdrop-blur-xs">
+                        <span className="font-mono text-7xl sm:text-8xl font-black text-amber-400 animate-ping">
+                          {countdown}
+                        </span>
+                      </div>
+                    )}
+
+                    {/* Live School Frame Watermark */}
+                    <div className="absolute bottom-2 left-2 right-2 z-20 rounded-xl bg-slate-950/80 backdrop-blur-md px-3 py-1.5 text-center text-[10px] font-bold text-amber-300 border border-amber-500/30">
                       {identidade.nomeColegio} • {identidade.nomeFeira} {identidade.anoFeira || '2026'}
                     </div>
 
+                    {/* Camera Error Message */}
+                    {cameraError && (
+                      <div className="absolute inset-0 z-30 flex flex-col items-center justify-center p-6 text-center bg-slate-950/95 space-y-3">
+                        <AlertCircle className="h-10 w-10 text-amber-400" />
+                        <h4 className="font-bold text-sm text-white">Não foi possível abrir a câmera</h4>
+                        <p className="text-xs text-slate-300 max-w-sm leading-relaxed">{cameraError}</p>
+                        <button
+                          onClick={() => startCamera(facingMode)}
+                          className="mt-2 rounded-xl bg-amber-500 px-4 py-2 text-xs font-bold text-slate-950 hover:bg-amber-400 transition"
+                        >
+                          Tentar Novamente
+                        </button>
+                      </div>
+                    )}
+
+                    {/* Quick Camera Flip Button (Top Right of Viewfinder) */}
+                    {isCameraActive && !cameraError && (
+                      <button
+                        onClick={handleSwitchCamera}
+                        title="Inverter Câmera (Frontal / Traseira)"
+                        className="absolute top-3 right-3 z-20 flex h-10 w-10 items-center justify-center rounded-full bg-slate-950/80 text-white border border-slate-700 hover:bg-slate-800 transition active:scale-95 shadow-lg"
+                      >
+                        <RefreshCw className="h-4 w-4 text-amber-400" />
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Shutter Action Controls (Under Viewfinder) */}
+                  <div className="flex items-center justify-center gap-6 py-2">
+                    {/* Timer 3s Trigger */}
                     <button
                       type="button"
-                      onClick={() => setPreviewImage(null)}
-                      className="absolute top-2 right-2 flex h-8 w-8 items-center justify-center rounded-full bg-slate-950/80 text-rose-400 border border-rose-500/30 hover:bg-rose-500/20"
+                      disabled={!isCameraActive || !!cameraError || countdown !== null}
+                      onClick={handleStartTimerCapture}
+                      title="Timer de 3 segundos para se preparar"
+                      className="flex flex-col items-center gap-1 text-[11px] font-semibold text-slate-400 hover:text-amber-400 transition disabled:opacity-40"
                     >
-                      <X className="h-4 w-4" />
+                      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-800 border border-slate-700">
+                        <Timer className="h-4 w-4" />
+                      </div>
+                      <span>Timer 3s</span>
+                    </button>
+
+                    {/* BIG ROUND CAMERA SHUTTER BUTTON */}
+                    <button
+                      type="button"
+                      disabled={!isCameraActive || !!cameraError || countdown !== null}
+                      onClick={handleCapturePhoto}
+                      title="Tirar Foto Agora"
+                      className="group relative flex h-18 w-18 sm:h-20 sm:w-20 items-center justify-center rounded-full border-4 border-white/80 bg-slate-950 shadow-2xl transition hover:border-amber-400 active:scale-90 disabled:opacity-40"
+                    >
+                      <div className="h-14 w-14 sm:h-15 sm:w-15 rounded-full bg-gradient-to-tr from-amber-500 to-amber-400 group-hover:from-amber-400 group-hover:to-amber-300 shadow-lg" />
+                    </button>
+
+                    {/* Flip Camera Button */}
+                    <button
+                      type="button"
+                      disabled={!isCameraActive || !!cameraError}
+                      onClick={handleSwitchCamera}
+                      title="Alternar Câmera"
+                      className="flex flex-col items-center gap-1 text-[11px] font-semibold text-slate-400 hover:text-amber-400 transition disabled:opacity-40"
+                    >
+                      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-800 border border-slate-700">
+                        <RefreshCw className="h-4 w-4" />
+                      </div>
+                      <span>Inverter</span>
                     </button>
                   </div>
-                ) : (
-                  <div
-                    onClick={() => fileInputRef.current?.click()}
-                    className="flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-slate-700 bg-slate-950/50 p-8 text-center cursor-pointer hover:border-amber-500/50 hover:bg-amber-500/5 transition space-y-3"
-                  >
-                    <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-amber-500/10 text-amber-400 border border-amber-500/30">
-                      <Camera className="h-7 w-7" />
+                </div>
+              ) : (
+                /* CAPTURED PHOTO REVIEW & PUBLISH FORM */
+                <form onSubmit={handleSubmitPhoto} className="space-y-4 animate-fade-in">
+                  {/* Photo Preview Card */}
+                  <div className="relative aspect-4/3 w-full rounded-2xl overflow-hidden bg-black border-2 border-amber-500/50 shadow-lg">
+                    <img src={previewImage} alt="Foto Capturada" className="h-full w-full object-cover" />
+
+                    {/* Retake Button Over Photo */}
+                    <button
+                      type="button"
+                      onClick={handleRetakePhoto}
+                      className="absolute top-3 right-3 flex items-center gap-1.5 rounded-xl bg-slate-950/85 px-3 py-1.5 text-xs font-bold text-amber-400 border border-amber-500/40 hover:bg-slate-900 transition shadow-lg"
+                    >
+                      <RotateCcw className="h-3.5 w-3.5" />
+                      <span>Tirar Outra Foto</span>
+                    </button>
+                  </div>
+
+                  {/* Form Fields */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className="space-y-1">
+                      <label className="text-xs font-semibold text-slate-300">
+                        Seu Nome / Grupo <span className="text-amber-400">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        autoFocus
+                        value={formNome}
+                        onChange={(e) => setFormNome(e.target.value)}
+                        placeholder="Ex: Família Souza, 3º Ano B..."
+                        className="w-full rounded-xl border border-slate-800 bg-slate-950 px-3.5 py-2 text-xs text-white placeholder-slate-500 focus:border-amber-500 focus:outline-none"
+                      />
                     </div>
-                    <div>
-                      <p className="text-xs font-bold text-white">Toque aqui para abrir a câmera ou galeria</p>
-                      <p className="text-[11px] text-slate-400 mt-0.5">Formatos suportados: JPG, PNG, WEBP</p>
+
+                    <div className="space-y-1">
+                      <label className="text-xs font-semibold text-slate-300">
+                        Quem é você?
+                      </label>
+                      <select
+                        value={formRelacao}
+                        onChange={(e) => setFormRelacao(e.target.value)}
+                        className="w-full rounded-xl border border-slate-800 bg-slate-950 px-3.5 py-2 text-xs text-white focus:border-amber-500 focus:outline-none"
+                      >
+                        <option value="Visitante">Visitante</option>
+                        <option value="Família">Família de Aluno</option>
+                        <option value="Estudante">Estudante</option>
+                        <option value="Professor">Professor / Funcionário</option>
+                        <option value="Ex-Aluno">Ex-Aluno</option>
+                      </select>
                     </div>
                   </div>
-                )}
 
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/*"
-                  capture="environment"
-                  onChange={handleFileChange}
-                  className="hidden"
-                />
-              </div>
+                  <div className="space-y-1">
+                    <label className="text-xs font-semibold text-slate-300">
+                      Onde você tirou a foto?
+                    </label>
+                    <select
+                      value={formLocal}
+                      onChange={(e) => setFormLocal(e.target.value)}
+                      className="w-full rounded-xl border border-slate-800 bg-slate-950 px-3.5 py-2 text-xs text-white focus:border-amber-500 focus:outline-none"
+                    >
+                      <option value="Área Geral">Área Geral da Feira</option>
+                      <option value="Estande Av. Paulista">Estande da Avenida Paulista</option>
+                      <option value="Mercadão Municipal">Estande do Mercadão Municipal</option>
+                      <option value="Bairro da Liberdade">Estande do Bairro da Liberdade</option>
+                      <option value="Praça Gastronômica">Praça Gastronômica / Lanches</option>
+                      <option value="Palco de Apresentações">Palco das Apresentações</option>
+                    </select>
+                  </div>
 
-              {/* Name & Relationship inputs */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div className="space-y-1">
-                  <label className="text-xs font-semibold text-slate-300">
-                    Seu Nome / Grupo <span className="text-amber-400">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={formNome}
-                    onChange={(e) => setFormNome(e.target.value)}
-                    placeholder="Ex: Família Souza, Turma 3º B..."
-                    className="w-full rounded-xl border border-slate-800 bg-slate-950 px-3.5 py-2 text-xs text-white placeholder-slate-500 focus:border-amber-500 focus:outline-none"
-                  />
-                </div>
+                  <div className="space-y-1">
+                    <label className="text-xs font-semibold text-slate-300">
+                      Mensagem / Legenda da Foto
+                    </label>
+                    <textarea
+                      rows={2}
+                      value={formMensagem}
+                      onChange={(e) => setFormMensagem(e.target.value)}
+                      placeholder="Deixe um recado legal sobre o que você achou da feira cultural..."
+                      className="w-full rounded-xl border border-slate-800 bg-slate-950 px-3.5 py-2 text-xs text-white placeholder-slate-500 focus:border-amber-500 focus:outline-none"
+                    />
+                  </div>
 
-                <div className="space-y-1">
-                  <label className="text-xs font-semibold text-slate-300">
-                    Quem é você?
-                  </label>
-                  <select
-                    value={formRelacao}
-                    onChange={(e) => setFormRelacao(e.target.value)}
-                    className="w-full rounded-xl border border-slate-800 bg-slate-950 px-3.5 py-2 text-xs text-white focus:border-amber-500 focus:outline-none"
-                  >
-                    <option value="Visitante">Visitante</option>
-                    <option value="Família">Família de Aluno</option>
-                    <option value="Estudante">Estudante</option>
-                    <option value="Professor">Professor / Funcionário</option>
-                    <option value="Ex-Aluno">Ex-Aluno</option>
-                  </select>
-                </div>
-              </div>
+                  {/* Publish & Cancel Buttons */}
+                  <div className="pt-2 flex items-center justify-between gap-3 border-t border-slate-800">
+                    <button
+                      type="button"
+                      onClick={handleRetakePhoto}
+                      className="flex items-center gap-1.5 rounded-xl border border-slate-800 bg-slate-950 px-4 py-2.5 text-xs font-semibold text-slate-300 hover:text-white"
+                    >
+                      <RotateCcw className="h-3.5 w-3.5" />
+                      <span>Tirar Outra</span>
+                    </button>
 
-              {/* Fair Booth location */}
-              <div className="space-y-1">
-                <label className="text-xs font-semibold text-slate-300">
-                  Onde a foto foi tirada?
-                </label>
-                <select
-                  value={formLocal}
-                  onChange={(e) => setFormLocal(e.target.value)}
-                  className="w-full rounded-xl border border-slate-800 bg-slate-950 px-3.5 py-2 text-xs text-white focus:border-amber-500 focus:outline-none"
-                >
-                  <option value="Área Geral">Área Geral da Feira</option>
-                  <option value="Estande Av. Paulista">Estande da Avenida Paulista</option>
-                  <option value="Mercadão Municipal">Estande do Mercadão Municipal</option>
-                  <option value="Bairro da Liberdade">Estande do Bairro da Liberdade</option>
-                  <option value="Praça de Alimentação">Praça Gastronômica</option>
-                  <option value="Palco Cultural">Palco das Apresentações</option>
-                </select>
-              </div>
-
-              {/* Message / Caption */}
-              <div className="space-y-1">
-                <label className="text-xs font-semibold text-slate-300">
-                  Mensagem / Recado da Feira
-                </label>
-                <textarea
-                  rows={3}
-                  value={formMensagem}
-                  onChange={(e) => setFormMensagem(e.target.value)}
-                  placeholder="Deixe um recado sobre o que você mais gostou na feira cultural..."
-                  className="w-full rounded-xl border border-slate-800 bg-slate-950 px-3.5 py-2 text-xs text-white placeholder-slate-500 focus:border-amber-500 focus:outline-none"
-                />
-              </div>
-
-              {/* Action buttons */}
-              <div className="pt-2 flex items-center justify-end gap-3">
-                <button
-                  type="button"
-                  onClick={() => setIsUploadOpen(false)}
-                  className="rounded-xl border border-slate-800 bg-slate-950 px-4 py-2.5 text-xs font-semibold text-slate-300 hover:text-white"
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  disabled={!formNome.trim() || !previewImage || isSubmitting}
-                  className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 px-6 py-2.5 text-xs font-bold text-slate-950 shadow-md shadow-amber-500/20 hover:from-amber-400 hover:to-amber-500 transition disabled:opacity-50"
-                >
-                  <Send className="h-3.5 w-3.5" />
-                  <span>{isSubmitting ? 'Publicando...' : 'Publicar no Mural'}</span>
-                </button>
-              </div>
-            </form>
+                    <button
+                      type="submit"
+                      disabled={!formNome.trim() || isSubmitting}
+                      className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 px-6 py-2.5 text-xs font-bold text-slate-950 shadow-md shadow-amber-500/25 hover:from-amber-400 hover:to-amber-500 transition disabled:opacity-50"
+                    >
+                      <Send className="h-3.5 w-3.5" />
+                      <span>{isSubmitting ? 'Publicando...' : 'Publicar no Mural'}</span>
+                    </button>
+                  </div>
+                </form>
+              )}
+            </div>
           </div>
         </div>
       )}
@@ -633,7 +844,6 @@ export const MuralFotosPage: React.FC<MuralFotosPageProps> = ({
             onClick={(e) => e.stopPropagation()}
             className="relative w-full max-w-3xl rounded-3xl border border-slate-800 bg-slate-900 overflow-hidden shadow-2xl"
           >
-            {/* Close button */}
             <button
               onClick={() => setSelectedPhoto(null)}
               className="absolute top-4 right-4 z-20 flex h-9 w-9 items-center justify-center rounded-full bg-slate-950/80 text-white border border-slate-800 hover:bg-slate-800 transition"
@@ -641,7 +851,6 @@ export const MuralFotosPage: React.FC<MuralFotosPageProps> = ({
               <X className="h-4 w-4" />
             </button>
 
-            {/* Photo */}
             <div className="relative max-h-[65vh] w-full overflow-hidden bg-slate-950 flex items-center justify-center">
               <img
                 src={selectedPhoto.fotoUrl}
@@ -650,7 +859,6 @@ export const MuralFotosPage: React.FC<MuralFotosPageProps> = ({
               />
             </div>
 
-            {/* Photo info */}
             <div className="p-6 space-y-4">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800 pb-3">
                 <div>
