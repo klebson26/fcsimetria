@@ -20,7 +20,8 @@ import {
   AdminUser,
   LogAlteracao,
   MediaItem,
-  Regiao
+  Regiao,
+  FotoMural
 } from '../types/database';
 
 import {
@@ -45,7 +46,8 @@ import {
   INITIAL_MODO_FEIRA,
   INITIAL_ADMINS,
   INITIAL_LOGS,
-  INITIAL_MEDIA
+  INITIAL_MEDIA,
+  INITIAL_MURAL_FOTOS
 } from '../data/initialData';
 
 import { db } from '../firebase';
@@ -74,6 +76,7 @@ const KEYS = {
   ADMINS: 'simetria_sp_admins',
   LOGS: 'simetria_sp_logs',
   MEDIA: 'simetria_sp_media',
+  MURAL: 'simetria_sp_mural_fotos',
   AUTH_SESSION: 'simetria_sp_auth_session'
 };
 
@@ -128,7 +131,8 @@ const KEY_TO_FIRESTORE_DOC: Record<string, string> = {
   [KEYS.APARENCIA]: 'aparencia',
   [KEYS.IDENTIDADE]: 'identidade',
   [KEYS.MODO_FEIRA]: 'modo_feira',
-  [KEYS.MEDIA]: 'media'
+  [KEYS.MEDIA]: 'media',
+  [KEYS.MURAL]: 'mural_fotos'
 };
 
 function setItem<T>(key: string, value: T) {
@@ -561,6 +565,48 @@ export function getAllTrashItems(): { id: string; titulo: string; tipo: string; 
   checkKey(KEYS.CURIOSIDADES, 'Curiosidade');
 
   return trash.sort((a, b) => new Date(b.dataAtualizacao).getTime() - new Date(a.dataAtualizacao).getTime());
+}
+
+// ==========================================
+// MURAL DE FOTOS DOS VISITANTES DA FEIRA
+// ==========================================
+export function getMuralFotos(): FotoMural[] {
+  return getItem<FotoMural[]>(KEYS.MURAL, INITIAL_MURAL_FOTOS);
+}
+
+export function addFotoMural(foto: Omit<FotoMural, 'id' | 'curtidas' | 'dataCriacao'>): FotoMural {
+  const fotos = getMuralFotos();
+  const novaFoto: FotoMural = {
+    ...foto,
+    id: 'mural_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7),
+    curtidas: 0,
+    dataCriacao: new Date().toISOString()
+  };
+  const atualizadas = [novaFoto, ...fotos];
+  setItem(KEYS.MURAL, atualizadas);
+  logAuditAction('Nova foto publicada no Mural da Feira', foto.autorNome, 'Mural');
+  return novaFoto;
+}
+
+export function likeFotoMural(id: string): number {
+  const fotos = getMuralFotos();
+  let curtidasNovas = 0;
+  const atualizadas = fotos.map((f) => {
+    if (f.id === id) {
+      curtidasNovas = (f.curtidas || 0) + 1;
+      return { ...f, curtidas: curtidasNovas };
+    }
+    return f;
+  });
+  setItem(KEYS.MURAL, atualizadas);
+  return curtidasNovas;
+}
+
+export function deleteFotoMural(id: string): void {
+  const fotos = getMuralFotos();
+  const atualizadas = fotos.filter((f) => f.id !== id);
+  setItem(KEYS.MURAL, atualizadas);
+  logAuditAction('Foto removida do Mural da Feira', id, 'Mural');
 }
 
 export { KEYS };

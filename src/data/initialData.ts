@@ -20,7 +20,8 @@ import {
   AdminUser,
   LogAlteracao,
   MediaItem,
-  Regiao
+  Regiao,
+  FotoMural
 } from '../types/database';
 
 export const INITIAL_REGIOES: Regiao[] = [
@@ -898,3 +899,60 @@ export const INITIAL_MEDIA: MediaItem[] = [
     dataUpload: '2026-01-10T10:00:00Z'
   }
 ];
+
+export const INITIAL_MURAL_FOTOS: FotoMural[] = [
+  {
+    id: 'mural_1',
+    autorNome: 'Família Oliveira & Lucas (7º Ano)',
+    turmaOuRelacao: 'Família',
+    mensagem: 'Incrível ver a dedicação dos alunos! O estande da Avenida Paulista e a maquete do MASP ficaram perfeitos! Parabéns Colégio Simetria! 👏❤️',
+    fotoUrl: 'https://images.unsplash.com/photo-1511632765486-a01980e01a18?q=80&w=800&auto=format&fit=crop',
+    curtidas: 42,
+    dataCriacao: '2026-10-01T14:20:00Z',
+    localFeira: 'Estande Av. Paulista',
+    destaque: true
+  },
+  {
+    id: 'mural_2',
+    autorNome: 'Beatriz, Mariana e Sofia',
+    turmaOuRelacao: 'Estudante 3º Ano',
+    mensagem: 'Nossa equipe do Bairro da Liberdade com as luminárias Suzuran! Venham provar os doces e participar da oficina de origami! 🏮🌸✨',
+    fotoUrl: 'https://images.unsplash.com/photo-1529156069898-49953e39b3ac?q=80&w=800&auto=format&fit=crop',
+    curtidas: 58,
+    dataCriacao: '2026-10-01T14:45:00Z',
+    localFeira: 'Bairro da Liberdade',
+    destaque: true
+  },
+  {
+    id: 'mural_3',
+    autorNome: 'Carlos Eduardo (Pai da Isabella)',
+    turmaOuRelacao: 'Visitante',
+    mensagem: 'O pastel de bacalhau e a mini degustação de frutas exóticas do Mercadão estavam espetaculares! Que feira caprichada!',
+    fotoUrl: 'https://images.unsplash.com/photo-1577495508048-b635879837f1?q=80&w=800&auto=format&fit=crop',
+    curtidas: 35,
+    dataCriacao: '2026-10-01T15:10:00Z',
+    localFeira: 'Mercadão Municipal'
+  },
+  {
+    id: 'mural_4',
+    autorNome: 'Professora Helena & Equipe de História',
+    turmaOuRelacao: 'Professor',
+    mensagem: 'Orgulho imenso de ver nossos estudantes compartilhando a história e cultura paulista com tanto entusiasmo e propriedade!',
+    fotoUrl: 'https://images.unsplash.com/photo-1524178232363-1fb2b075b655?q=80&w=800&auto=format&fit=crop',
+    curtidas: 73,
+    dataCriacao: '2026-10-01T13:30:00Z',
+    localFeira: 'Área Geral',
+    destaque: true
+  },
+  {
+    id: 'mural_5',
+    autorNome: 'Turma do 9º Ano B',
+    turmaOuRelacao: 'Estudante',
+    mensagem: 'Foto oficial da turma com a bandeira de SP e o troféu do Quiz Cultural! Valeu a pena cada noite de pesquisa! 🏆🥇',
+    fotoUrl: 'https://images.unsplash.com/photo-1523240795612-9a054b0db644?q=80&w=800&auto=format&fit=crop',
+    curtidas: 61,
+    dataCriacao: '2026-10-01T15:35:00Z',
+    localFeira: 'Estande Av. Paulista'
+  }
+];
+

@@ -98,6 +98,9 @@ export const Header: React.FC<HeaderProps> = ({
     } else if (path === '/#liberdade') {
       window.location.hash = 'liberdade';
       window.scrollTo({ top: 0, behavior: 'smooth' });
+    } else if (path === '/#mural') {
+      window.location.hash = 'mural';
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     } else if (path.startsWith('/#')) {
       if (onNavigateToHome) {
         onNavigateToHome();
@@ -231,6 +234,22 @@ export const Header: React.FC<HeaderProps> = ({
                     <button
                       onClick={() => {
                         setMoreDropdownOpen(false);
+                        window.location.hash = 'mural';
+                        window.scrollTo({ top: 0, behavior: 'smooth' });
+                      }}
+                      className="w-full text-left px-3 py-2 text-xs font-semibold text-white hover:bg-slate-900 rounded-xl transition flex items-center justify-between group"
+                    >
+                      <span className="flex items-center gap-2">
+                        <Camera className="h-3.5 w-3.5 text-amber-400" />
+                        <span>Mural de Fotos</span>
+                      </span>
+                      <span className="rounded-full bg-amber-500/20 px-1.5 py-0.2 text-[9px] font-bold text-amber-300 border border-amber-500/30">
+                        Novo
+                      </span>
+                    </button>
+                    <button
+                      onClick={() => {
+                        setMoreDropdownOpen(false);
                         onOpenQRCodeModal();
                       }}
                       className="w-full text-left px-3 py-2 text-xs font-semibold text-amber-400 hover:text-amber-300 hover:bg-amber-500/10 rounded-xl transition flex items-center gap-2"
@@ -342,25 +361,39 @@ export const Header: React.FC<HeaderProps> = ({
       {mobileMenuOpen && (
         <div className="lg:hidden border-t border-slate-800/80 bg-slate-950/98 backdrop-blur-2xl px-4 py-4 space-y-3 shadow-2xl animate-fade-in">
           {/* Quick Primary Actions in Mobile Drawer */}
-          <div className="grid grid-cols-2 gap-2">
+          <div className="space-y-2">
             <button
               onClick={() => {
                 setMobileMenuOpen(false);
-                onOpenFairMode();
+                window.location.hash = 'mural';
+                window.scrollTo({ top: 0, behavior: 'smooth' });
               }}
-              className="flex items-center justify-center gap-2 rounded-xl bg-amber-500 py-2.5 text-xs font-bold text-slate-950 shadow-md hover:bg-amber-400 transition"
+              className="w-full flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-amber-500/20 to-amber-600/20 border border-amber-500/40 py-2.5 text-xs font-bold text-amber-300 shadow-md hover:bg-amber-500/30 transition"
             >
-              <Play className="h-3.5 w-3.5 fill-slate-950" /> Modo Feira
+              <Camera className="h-4 w-4 text-amber-400" />
+              <span>📸 Mural de Fotos dos Visitantes</span>
             </button>
-            <button
-              onClick={() => {
-                setMobileMenuOpen(false);
-                onOpenQRCodeModal();
-              }}
-              className="flex items-center justify-center gap-2 rounded-xl border border-amber-500/40 bg-amber-500/10 py-2.5 text-xs font-bold text-amber-300 hover:bg-amber-500/20 transition"
-            >
-              <QrCode className="h-3.5 w-3.5 text-amber-400" /> QR Code Mesa
-            </button>
+
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                onClick={() => {
+                  setMobileMenuOpen(false);
+                  onOpenFairMode();
+                }}
+                className="flex items-center justify-center gap-2 rounded-xl bg-amber-500 py-2 text-xs font-bold text-slate-950 shadow-md hover:bg-amber-400 transition"
+              >
+                <Play className="h-3.5 w-3.5 fill-slate-950" /> Modo Feira
+              </button>
+              <button
+                onClick={() => {
+                  setMobileMenuOpen(false);
+                  onOpenQRCodeModal();
+                }}
+                className="flex items-center justify-center gap-2 rounded-xl border border-amber-500/40 bg-amber-500/10 py-2 text-xs font-bold text-amber-300 hover:bg-amber-500/20 transition"
+              >
+                <QrCode className="h-3.5 w-3.5 text-amber-400" /> QR Code Mesa
+              </button>
+            </div>
           </div>
 
           {/* All Menu Items in Mobile Drawer */}

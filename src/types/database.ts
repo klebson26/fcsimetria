@@ -281,3 +281,16 @@ export interface MediaItem {
   legenda?: string;
   dataUpload: string;
 }
+
+export interface FotoMural {
+  id: string;
+  autorNome: string;
+  turmaOuRelacao: string; // 'Visitante', 'Família', 'Estudante', 'Professor', 'Ex-Aluno'
+  mensagem: string;
+  fotoUrl: string;
+  curtidas: number;
+  dataCriacao: string;
+  localFeira?: string; // 'Estande Av. Paulista', 'Mercadão', 'Bairro da Liberdade', 'Área Geral'
+  destaque?: boolean;
+}
+

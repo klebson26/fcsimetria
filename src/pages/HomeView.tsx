@@ -174,6 +174,41 @@ export const HomeView: React.FC<HomeViewProps> = ({
         </section>
       </FadeIn>
 
+      {/* Banner de Destaque: Mural de Fotos dos Visitantes */}
+      <FadeIn direction="up">
+        <div className="relative overflow-hidden rounded-3xl border border-amber-500/40 bg-gradient-to-r from-amber-500/10 via-slate-900 to-amber-500/5 p-6 sm:p-8 shadow-2xl flex flex-col md:flex-row md:items-center justify-between gap-6">
+          <div className="space-y-3 max-w-2xl">
+            <div className="inline-flex items-center gap-2 rounded-full border border-amber-500/40 bg-amber-500/15 px-3 py-1 text-xs font-bold text-amber-300">
+              <Camera className="h-3.5 w-3.5" />
+              <span>INTERATIVO AO VIVO</span>
+            </div>
+            <h2 className="font-serif text-2xl sm:text-3xl font-bold text-white">
+              Mural de Fotos dos Visitantes 📸
+            </h2>
+            <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
+              Está visitando a feira cultural? Tire uma foto com sua família, amigos ou turma nos estandes da Paulista, Mercadão e Liberdade e compartilhe no mural ao vivo!
+            </p>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-3 shrink-0">
+            <a
+              href="#mural"
+              className="flex items-center gap-2 rounded-2xl bg-gradient-to-r from-amber-500 to-amber-600 px-5 py-3 text-xs font-bold text-slate-950 shadow-lg shadow-amber-500/25 hover:from-amber-400 hover:to-amber-500 transition"
+            >
+              <Camera className="h-4 w-4 fill-slate-950" />
+              <span>Ver & Publicar Foto</span>
+            </a>
+            <button
+              onClick={() => onOpenQRCodeModal('mural')}
+              className="flex items-center gap-1.5 rounded-2xl border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-xs font-bold text-amber-300 hover:bg-amber-500/20 transition"
+            >
+              <QrCode className="h-4 w-4 text-amber-400" />
+              <span>QR Code Mesa</span>
+            </button>
+          </div>
+        </div>
+      </FadeIn>
+
       {/* 3 Main Highlighted Topics Cards Bar */}
       <FadeIn delayMs={100} durationMs={700}>
         <section className="space-y-4">

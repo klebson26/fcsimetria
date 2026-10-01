@@ -15,6 +15,7 @@ import { QuizView } from './pages/QuizView';
 import { PaulistaPage } from './pages/PaulistaPage';
 import { MercadaoPage } from './pages/MercadaoPage';
 import { LiberdadePage } from './pages/LiberdadePage';
+import { MuralFotosPage } from './pages/MuralFotosPage';
 
 // Admin Components & Pages
 import { AdminSidebar } from './admin/components/AdminSidebar';
@@ -51,7 +52,7 @@ export default function App() {
     initStorage();
   }, []);
 
-  type AppView = 'PUBLIC' | 'QUIZ' | 'ADMIN' | 'PAULISTA' | 'MERCADAO' | 'LIBERDADE';
+  type AppView = 'PUBLIC' | 'QUIZ' | 'ADMIN' | 'PAULISTA' | 'MERCADAO' | 'LIBERDADE' | 'MURAL';
 
   const parseViewFromHash = (): AppView => {
     const hash = window.location.hash.toLowerCase();
@@ -60,6 +61,7 @@ export default function App() {
     if (hash === '#paulista' || hash === '#/paulista') return 'PAULISTA';
     if (hash === '#mercadao' || hash === '#/mercadao') return 'MERCADAO';
     if (hash === '#liberdade' || hash === '#/liberdade') return 'LIBERDADE';
+    if (hash === '#mural' || hash === '#/mural') return 'MURAL';
     return 'PUBLIC';
   };
 
@@ -220,6 +222,15 @@ export default function App() {
               onBackToHome={handleNavigateToPublic}
               onNavigateToQuiz={handleNavigateToQuiz}
               onOpenQRCodeModal={(topic = 'liberdade') => {
+                setSelectedQrTopic(topic);
+                setShowQRCodeModal(true);
+              }}
+            />
+          )}
+          {currentView === 'MURAL' && (
+            <MuralFotosPage
+              onBackToHome={handleNavigateToPublic}
+              onOpenQRCodeModal={(topic = 'mural') => {
                 setSelectedQrTopic(topic);
                 setShowQRCodeModal(true);
               }}

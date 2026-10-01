@@ -21,7 +21,8 @@ import {
   Clock,
   HelpCircle,
   MapPin,
-  Check
+  Check,
+  Camera
 } from 'lucide-react';
 
 interface QRCodePrintModalProps {
@@ -61,6 +62,13 @@ export const QRCodePrintModal: React.FC<QRCodePrintModalProps> = ({
       url: baseUrl + '#',
       icon: Sparkles,
       badge: 'EXPLORAR TUDO'
+    },
+    mural: {
+      title: 'Mural de Fotos dos Visitantes',
+      subtitle: 'Tire sua foto e participe ao vivo do mural de memórias da feira',
+      url: baseUrl + '#mural',
+      icon: Camera,
+      badge: 'MURAL AO VIVO'
     },
     cidades: {
       title: 'Cidades Paulistas',
