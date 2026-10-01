@@ -3,6 +3,7 @@ import {
   getCidades,
   getPontosTuristicos,
   getPaulistaContent,
+  getMercadaoHeader,
   getMercadaoProdutos,
   getLiberdadeContent,
   getCulinaria,
@@ -56,6 +57,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
   const [cidades, setCidades] = useState(getCidades());
   const [pontos, setPontos] = useState(getPontosTuristicos());
   const [paulista, setPaulista] = useState(getPaulistaContent());
+  const [mercadaoHeader, setMercadaoHeader] = useState(getMercadaoHeader());
   const [mercadao, setMercadao] = useState(getMercadaoProdutos());
   const [liberdade, setLiberdade] = useState(getLiberdadeContent());
   const [culinaria, setCulinaria] = useState(getCulinaria());
@@ -76,6 +78,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
       setCidades(getCidades());
       setPontos(getPontosTuristicos());
       setPaulista(getPaulistaContent());
+      setMercadaoHeader(getMercadaoHeader());
       setMercadao(getMercadaoProdutos());
       setLiberdade(getLiberdadeContent());
       setCulinaria(getCulinaria());
@@ -250,7 +253,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
                 <div className="space-y-3">
                   <div className="h-44 w-full overflow-hidden rounded-2xl bg-slate-950 border border-slate-800">
                     <img
-                      src={mercadao[0]?.imagem || '/images/mercadao_sp_1790701738265.jpg'}
+                      src={mercadaoHeader.imagemPrincipal || '/images/mercadao_sp_1790701738265.jpg'}
                       alt="Mercadão de São Paulo"
                       className="h-full w-full object-cover group-hover:scale-105 transition duration-500"
                     />
@@ -568,10 +571,10 @@ export const HomeView: React.FC<HomeViewProps> = ({
                 <ShoppingBag className="h-4 w-4" /> ESPECIAL MERCADÃO MUNICIPAL
               </div>
               <h2 className="font-serif text-3xl font-bold text-white sm:text-4xl">
-                Mercado Municipal Paulistano: O Templo da Gastronomia Paulista
+                {mercadaoHeader.titulo || 'Mercado Municipal Paulistano: O Templo da Gastronomia Paulista'}
               </h2>
               <p className="text-sm text-slate-300 leading-relaxed">
-                Inaugurado em 1933 com projeto assinado pelo renomado escritório de Ramos de Azevedo, o Mercadão é um dos cartões-postais gastronômicos mais famosos do país. Abriga 72 vitrais alemães do artista Conrado Sorgenicht Filho ilustrando a agropecuária paulista e oferece iguarias, frutas raras e a famosa gastronomia do centro histórico.
+                {mercadaoHeader.historia || 'Inaugurado em 1933 com projeto assinado pelo renomado escritório de Ramos de Azevedo, o Mercadão é um dos cartões-postais gastronômicos mais famosos do país.'}
               </p>
 
               <div className="pt-2">
@@ -671,8 +674,8 @@ export const HomeView: React.FC<HomeViewProps> = ({
             <div className="lg:col-span-5 flex justify-center">
               <div className="relative h-80 sm:h-96 w-full rounded-2xl overflow-hidden border border-amber-500/30 shadow-2xl">
                 <img
-                  src={publishedMercadao[0]?.imagem || '/images/mercadao_sp_1790701738265.jpg'}
-                  alt="Mercadão de São Paulo"
+                  src={mercadaoHeader.imagemPrincipal || '/images/mercadao_sp_1790701738265.jpg'}
+                  alt="Mercadão de São Paulo - Fachada"
                   className="h-full w-full object-cover"
                 />
               </div>

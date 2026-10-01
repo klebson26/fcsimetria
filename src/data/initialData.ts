@@ -2,6 +2,7 @@ import {
   Cidade,
   PontoTuristico,
   PaulistaContent,
+  MercadaoHeader,
   MercadaoProduto,
   LiberdadeContent,
   PratoCulinaria,
@@ -329,13 +330,33 @@ export const INITIAL_PAULISTA: PaulistaContent = {
   ]
 };
 
+export const INITIAL_MERCADAO_HEADER: MercadaoHeader = {
+  id: 'mer_header_1',
+  titulo: 'Mercado Municipal Paulistano: O Templo da Gastronomia Paulista',
+  subtitulo: 'Inaugurado em 1933 com projeto de Ramos de Azevedo e 72 vitrais alemães de Conrado Sorgenicht.',
+  descricao: 'O Mercado Municipal de São Paulo é o mais famoso entreposto gastronômico do país.',
+  imagemPrincipal: '/images/mercadao_sp_1790701738265.jpg',
+  historia: 'Inaugurado em 1933 com projeto assinado pelo renomado escritório de Ramos de Azevedo, o Mercadão é um dos cartões-postais gastronômicos mais famosos do país. Abriga 72 vitrais alemães do artista Conrado Sorgenicht Filho ilustrando a agropecuária paulista e oferece iguarias, frutas raras e a famosa gastronomia do centro histórico.',
+  iguarias: [
+    '🥪 Sanduíche de Mortadela Fartíssimo (400g)',
+    '🥟 Pastel de Bacalhau do Hocca (Desde 1952)',
+    '🥭 Frutas Exóticas & Tropicais Raras',
+    '🧀 Queijos Finos & Embutidos Artesanais',
+    '🏛️ 72 Vitrais Alemães Ilustrando SP'
+  ],
+  status: 'PUBLICADO',
+  ordem: 1,
+  dataCriacao: '2026-01-01T00:00:00Z',
+  dataAtualizacao: '2026-09-29T10:00:00Z'
+};
+
 export const INITIAL_MERCADAO: MercadaoProduto[] = [
   {
     id: 'mer_1',
     titulo: 'Sanduíche de Mortadela Fartíssimo',
     descricao: 'O lendário sanduíche com quase meio quilo de mortadela derretida com queijo provolone no pão francês crocante.',
-    categoria: 'Lanches' as any,
-    imagem: '/images/mercadao_sp_1790701738265.jpg',
+    categoria: 'Lanches',
+    imagem: 'https://images.unsplash.com/photo-1528735602780-2552fd46c7af?q=80&w=800&auto=format&fit=crop',
     curiosidade: 'Surgiu por brincadeira na década de 1930 quando um cliente reclamou do recheio fino e o dono do box decidiu caprichar na quantidade!',
     origem: 'Bar do Mané no Mercadão de SP',
     utilizacao: 'Consumido quente no mezanino histórico do mercado acompanhado de cerveja bem gelada.',
@@ -349,7 +370,7 @@ export const INITIAL_MERCADAO: MercadaoProduto[] = [
     titulo: 'Pastel de Bacalhau do Hocca',
     descricao: 'Pastel dourado e sequinho recheado com mais de 200g do mais nobre bacalhau do Atlântico e azeite extra virgem.',
     categoria: 'Produtos regionais',
-    imagem: '/images/mercadao_sp_1790701738265.jpg',
+    imagem: 'https://images.unsplash.com/photo-1626700051175-6818013e1d4f?q=80&w=800&auto=format&fit=crop',
     curiosidade: 'Criado pela família imigrante portuguesa Horácio em 1952, tornou-se patrimônio imaterial da cidade.',
     origem: 'Hocca Bar no Mercadão',
     utilizacao: 'Acompanhado de pimenta caseira verde.',
@@ -363,7 +384,7 @@ export const INITIAL_MERCADAO: MercadaoProduto[] = [
     titulo: 'Frutas Exóticas & Tropicais',
     descricao: 'Pitaia, Pitaia Amarela da Colômbia, Mangostão, Achachairú, Tamarillo e Granadilla servidos em degustações animadas pelos feirantes.',
     categoria: 'Frutas',
-    imagem: '/images/mercadao_sp_1790701738265.jpg',
+    imagem: 'https://images.unsplash.com/photo-1619566636858-adf3ef46400b?q=80&w=800&auto=format&fit=crop',
     curiosidade: 'Os feirantes do Mercadão são conhecidos pelas cortejadoras degustações de frutas docíssimas diretamente na faca.',
     origem: 'Bancas de Frutas do Mercadão',
     utilizacao: 'Consumo in natura ou elaboração de sobremesas finas.',

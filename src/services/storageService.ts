@@ -2,6 +2,7 @@ import {
   Cidade,
   PontoTuristico,
   PaulistaContent,
+  MercadaoHeader,
   MercadaoProduto,
   LiberdadeContent,
   PratoCulinaria,
@@ -27,6 +28,7 @@ import {
   INITIAL_CIDADES,
   INITIAL_PONTOS_TURISTICOS,
   INITIAL_PAULISTA,
+  INITIAL_MERCADAO_HEADER,
   INITIAL_MERCADAO,
   INITIAL_LIBERDADE,
   INITIAL_CULINARIA,
@@ -54,6 +56,7 @@ const KEYS = {
   CIDADES: 'simetria_sp_cidades',
   PONTOS: 'simetria_sp_pontos',
   PAULISTA: 'simetria_sp_paulista',
+  MERCADAO_HEADER: 'simetria_sp_mercadao_header',
   MERCADAO: 'simetria_sp_mercadao',
   LIBERDADE: 'simetria_sp_liberdade',
   CULINARIA: 'simetria_sp_culinaria',
@@ -110,6 +113,7 @@ const KEY_TO_FIRESTORE_DOC: Record<string, string> = {
   [KEYS.CIDADES]: 'cidades',
   [KEYS.PONTOS]: 'pontos',
   [KEYS.PAULISTA]: 'paulista',
+  [KEYS.MERCADAO_HEADER]: 'mercadao_header',
   [KEYS.MERCADAO]: 'mercadao',
   [KEYS.LIBERDADE]: 'liberdade',
   [KEYS.CULINARIA]: 'culinaria',
@@ -152,6 +156,7 @@ export function initStorage() {
     localStorage.setItem(KEYS.CIDADES, JSON.stringify(INITIAL_CIDADES));
     localStorage.setItem(KEYS.PONTOS, JSON.stringify(INITIAL_PONTOS_TURISTICOS));
     localStorage.setItem(KEYS.PAULISTA, JSON.stringify(INITIAL_PAULISTA));
+    localStorage.setItem(KEYS.MERCADAO_HEADER, JSON.stringify(INITIAL_MERCADAO_HEADER));
     localStorage.setItem(KEYS.MERCADAO, JSON.stringify(INITIAL_MERCADAO));
     localStorage.setItem(KEYS.LIBERDADE, JSON.stringify(INITIAL_LIBERDADE));
     localStorage.setItem(KEYS.CULINARIA, JSON.stringify(INITIAL_CULINARIA));
@@ -289,6 +294,14 @@ export function getPontosTuristicos(includeLixeira = false): PontoTuristico[] {
 
 export function getPaulistaContent(): PaulistaContent {
   return getItem<PaulistaContent>(KEYS.PAULISTA, INITIAL_PAULISTA);
+}
+
+export function getMercadaoHeader(): MercadaoHeader {
+  return getItem<MercadaoHeader>(KEYS.MERCADAO_HEADER, INITIAL_MERCADAO_HEADER);
+}
+
+export function saveMercadaoHeader(header: MercadaoHeader) {
+  setItem(KEYS.MERCADAO_HEADER, header);
 }
 
 export function getMercadaoProdutos(includeLixeira = false): MercadaoProduto[] {

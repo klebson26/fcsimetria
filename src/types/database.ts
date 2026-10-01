@@ -71,8 +71,15 @@ export interface PaulistaContent extends BaseEntity {
   pontosDeInteresse: string[];
 }
 
+export interface MercadaoHeader extends BaseEntity {
+  subtitulo: string;
+  imagemPrincipal: string;
+  historia: string;
+  iguarias: string[];
+}
+
 export interface MercadaoProduto extends BaseEntity {
-  categoria: 'Frutas' | 'Temperos' | 'Queijos' | 'Doces' | 'Carnes' | 'Bebidas' | 'Produtos regionais';
+  categoria: 'Frutas' | 'Temperos' | 'Queijos' | 'Doces' | 'Carnes' | 'Bebidas' | 'Produtos regionais' | 'Lanches';
   imagem: string;
   curiosidade: string;
   origem: string;
