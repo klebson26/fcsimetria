@@ -89,11 +89,21 @@ export const Header: React.FC<HeaderProps> = ({
     setMoreDropdownOpen(false);
     if (path === '/#quiz') {
       onNavigateToQuiz();
+    } else if (path === '/#paulista') {
+      window.location.hash = 'paulista';
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    } else if (path === '/#mercadao') {
+      window.location.hash = 'mercadao';
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    } else if (path === '/#liberdade') {
+      window.location.hash = 'liberdade';
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     } else if (path.startsWith('/#')) {
       if (onNavigateToHome) {
         onNavigateToHome();
       }
       const targetId = path.replace('/#', '');
+      window.location.hash = targetId;
       setTimeout(() => {
         const element = document.getElementById(targetId);
         if (element) {
@@ -104,6 +114,7 @@ export const Header: React.FC<HeaderProps> = ({
       if (onNavigateToHome) {
         onNavigateToHome();
       }
+      window.location.hash = '';
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
   };

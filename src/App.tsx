@@ -12,6 +12,9 @@ import { QRCodePrintModal } from './components/QRCodePrintModal';
 // Public Pages
 import { HomeView } from './pages/HomeView';
 import { QuizView } from './pages/QuizView';
+import { PaulistaPage } from './pages/PaulistaPage';
+import { MercadaoPage } from './pages/MercadaoPage';
+import { LiberdadePage } from './pages/LiberdadePage';
 
 // Admin Components & Pages
 import { AdminSidebar } from './admin/components/AdminSidebar';
@@ -48,9 +51,19 @@ export default function App() {
     initStorage();
   }, []);
 
-  const [currentView, setCurrentView] = useState<'PUBLIC' | 'QUIZ' | 'ADMIN'>(() => {
-    return window.location.hash.startsWith('#admin') ? 'ADMIN' : 'PUBLIC';
-  });
+  type AppView = 'PUBLIC' | 'QUIZ' | 'ADMIN' | 'PAULISTA' | 'MERCADAO' | 'LIBERDADE';
+
+  const parseViewFromHash = (): AppView => {
+    const hash = window.location.hash.toLowerCase();
+    if (hash.startsWith('#admin')) return 'ADMIN';
+    if (hash === '#quiz' || hash === '#/quiz') return 'QUIZ';
+    if (hash === '#paulista' || hash === '#/paulista') return 'PAULISTA';
+    if (hash === '#mercadao' || hash === '#/mercadao') return 'MERCADAO';
+    if (hash === '#liberdade' || hash === '#/liberdade') return 'LIBERDADE';
+    return 'PUBLIC';
+  };
+
+  const [currentView, setCurrentView] = useState<AppView>(parseViewFromHash);
 
   const [adminTab, setAdminTab] = useState('dashboard');
   const [session, setSession] = useState(getAuthSession());
@@ -70,16 +83,10 @@ export default function App() {
     });
   }, []);
 
-  // Hash route listener for /admin URL
+  // Hash route listener for all subpages and QR codes
   useEffect(() => {
     const handleHashChange = () => {
-      if (window.location.hash.startsWith('#admin')) {
-        setCurrentView('ADMIN');
-      } else if (window.location.hash === '#quiz') {
-        setCurrentView('QUIZ');
-      } else {
-        setCurrentView('PUBLIC');
-      }
+      setCurrentView(parseViewFromHash());
     };
 
     window.addEventListener('hashchange', handleHashChange);
@@ -181,20 +188,55 @@ export default function App() {
         activeSection={currentView === 'QUIZ' ? 'quiz' : ''}
       />
 
-      <main className="flex-1 mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8 py-8">
+      <main className="flex-1 w-full">
         <div key={currentView} className="animate-fade-in">
-          {currentView === 'QUIZ' ? (
-            <QuizView />
-          ) : (
-            <HomeView
+          {currentView === 'QUIZ' && (
+            <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8">
+              <QuizView />
+            </div>
+          )}
+          {currentView === 'PAULISTA' && (
+            <PaulistaPage
+              onBackToHome={handleNavigateToPublic}
               onNavigateToQuiz={handleNavigateToQuiz}
-              onOpenFairMode={() => setShowFairModeModal(true)}
-              onOpenQRCodeModal={(topic = 'geral') => {
+              onOpenQRCodeModal={(topic = 'paulista') => {
                 setSelectedQrTopic(topic);
                 setShowQRCodeModal(true);
               }}
-              onSelectCidade={(cidade) => {}}
             />
+          )}
+          {currentView === 'MERCADAO' && (
+            <MercadaoPage
+              onBackToHome={handleNavigateToPublic}
+              onNavigateToQuiz={handleNavigateToQuiz}
+              onOpenQRCodeModal={(topic = 'mercadao') => {
+                setSelectedQrTopic(topic);
+                setShowQRCodeModal(true);
+              }}
+            />
+          )}
+          {currentView === 'LIBERDADE' && (
+            <LiberdadePage
+              onBackToHome={handleNavigateToPublic}
+              onNavigateToQuiz={handleNavigateToQuiz}
+              onOpenQRCodeModal={(topic = 'liberdade') => {
+                setSelectedQrTopic(topic);
+                setShowQRCodeModal(true);
+              }}
+            />
+          )}
+          {currentView === 'PUBLIC' && (
+            <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8">
+              <HomeView
+                onNavigateToQuiz={handleNavigateToQuiz}
+                onOpenFairMode={() => setShowFairModeModal(true)}
+                onOpenQRCodeModal={(topic = 'geral') => {
+                  setSelectedQrTopic(topic);
+                  setShowQRCodeModal(true);
+                }}
+                onSelectCidade={(cidade) => {}}
+              />
+            </div>
           )}
         </div>
       </main>

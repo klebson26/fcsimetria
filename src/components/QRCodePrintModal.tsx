@@ -70,25 +70,25 @@ export const QRCodePrintModal: React.FC<QRCodePrintModalProps> = ({
       badge: 'CIDADES DE SP'
     },
     paulista: {
-      title: 'Especial Avenida Paulista',
-      subtitle: 'História, MASP, arquitetura e atrativos da Paulista',
+      title: 'Avenida Paulista (Página Exclusiva)',
+      subtitle: 'História, linha do tempo, MASP, arquitetura e atrativos',
       url: baseUrl + '#paulista',
       icon: Landmark,
-      badge: 'AV. PAULISTA'
+      badge: 'PÁGINA DEDICADA'
     },
     mercadao: {
-      title: 'Mercadão Municipal de SP',
-      subtitle: 'Iguarias, vitrais históricos e o famoso sanduíche de mortadela',
+      title: 'Mercadão Municipal de SP (Página Exclusiva)',
+      subtitle: 'Iguarias, 72 vitrais históricos e os produtos mais famosos',
       url: baseUrl + '#mercadao',
       icon: ShoppingBag,
-      badge: 'MERCADÃO SP'
+      badge: 'PÁGINA DEDICADA'
     },
     liberdade: {
-      title: 'Bairro da Liberdade',
+      title: 'Bairro da Liberdade (Página Exclusiva)',
       subtitle: 'Tradição oriental, feirinha, gastronomia e cultura asiática',
       url: baseUrl + '#liberdade',
       icon: Compass,
-      badge: 'LIBERDADE'
+      badge: 'PÁGINA DEDICADA'
     },
     culinaria: {
       title: 'Gastronomia & Pratos Típicos',

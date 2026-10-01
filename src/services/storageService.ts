@@ -297,6 +297,7 @@ export function getPontosTuristicos(includeLixeira = false): PontoTuristico[] {
 export function getPaulistaContent(): PaulistaContent {
   return getItem<PaulistaContent>(KEYS.PAULISTA, INITIAL_PAULISTA);
 }
+export const getPaulista = getPaulistaContent;
 
 export function getMercadaoHeader(): MercadaoHeader {
   return getItem<MercadaoHeader>(KEYS.MERCADAO_HEADER, INITIAL_MERCADAO_HEADER);
@@ -310,10 +311,12 @@ export function getMercadaoProdutos(includeLixeira = false): MercadaoProduto[] {
   const items = getItem<MercadaoProduto[]>(KEYS.MERCADAO, INITIAL_MERCADAO);
   return includeLixeira ? items : items.filter((i) => !i.inLixeira);
 }
+export const getMercadao = getMercadaoProdutos;
 
 export function getLiberdadeContent(): LiberdadeContent {
   return getItem<LiberdadeContent>(KEYS.LIBERDADE, INITIAL_LIBERDADE);
 }
+export const getLiberdade = getLiberdadeContent;
 
 export function getCulinaria(includeLixeira = false): PratoCulinaria[] {
   const items = getItem<PratoCulinaria[]>(KEYS.CULINARIA, INITIAL_CULINARIA);

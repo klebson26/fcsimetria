@@ -547,6 +547,24 @@ export const HomeView: React.FC<HomeViewProps> = ({
                   ))}
                 </div>
               </div>
+
+              {/* Action Buttons to open Dedicated Page or QR Code */}
+              <div className="pt-4 flex flex-wrap items-center gap-3">
+                <a
+                  href="#paulista"
+                  className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-rose-500 to-rose-600 px-5 py-2.5 text-xs font-bold text-white shadow-lg shadow-rose-500/20 hover:from-rose-400 hover:to-rose-500 transition"
+                >
+                  <Landmark className="h-4 w-4" />
+                  <span>Acessar Página Completa da Av. Paulista →</span>
+                </a>
+                <button
+                  onClick={() => onOpenQRCodeModal('paulista')}
+                  className="inline-flex items-center gap-1.5 rounded-xl border border-rose-500/40 bg-rose-500/10 px-3.5 py-2.5 text-xs font-bold text-rose-300 hover:bg-rose-500/20 transition"
+                >
+                  <QrCode className="h-4 w-4 text-rose-400" />
+                  <span>QR Code Mesa</span>
+                </button>
+              </div>
             </div>
 
             <div className="lg:col-span-5 flex justify-center">
@@ -669,6 +687,24 @@ export const HomeView: React.FC<HomeViewProps> = ({
                   ))}
                 </div>
               </div>
+
+              {/* Action Buttons to open Dedicated Page or QR Code */}
+              <div className="pt-4 flex flex-wrap items-center gap-3">
+                <a
+                  href="#mercadao"
+                  className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 px-5 py-2.5 text-xs font-bold text-slate-950 shadow-lg shadow-amber-500/20 hover:from-amber-400 hover:to-amber-500 transition"
+                >
+                  <ShoppingBag className="h-4 w-4" />
+                  <span>Acessar Página Completa do Mercadão →</span>
+                </a>
+                <button
+                  onClick={() => onOpenQRCodeModal('mercadao')}
+                  className="inline-flex items-center gap-1.5 rounded-xl border border-amber-500/40 bg-amber-500/10 px-3.5 py-2.5 text-xs font-bold text-amber-300 hover:bg-amber-500/20 transition"
+                >
+                  <QrCode className="h-4 w-4 text-amber-400" />
+                  <span>QR Code Mesa</span>
+                </button>
+              </div>
             </div>
 
             <div className="lg:col-span-5 flex justify-center">
@@ -760,6 +796,24 @@ export const HomeView: React.FC<HomeViewProps> = ({
                     </div>
                   ))}
                 </div>
+              </div>
+
+              {/* Action Buttons to open Dedicated Page or QR Code */}
+              <div className="pt-4 flex flex-wrap items-center gap-3">
+                <a
+                  href="#liberdade"
+                  className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-purple-500 to-purple-600 px-5 py-2.5 text-xs font-bold text-white shadow-lg shadow-purple-500/20 hover:from-purple-400 hover:to-purple-500 transition"
+                >
+                  <Compass className="h-4 w-4" />
+                  <span>Acessar Página Completa da Liberdade →</span>
+                </a>
+                <button
+                  onClick={() => onOpenQRCodeModal('liberdade')}
+                  className="inline-flex items-center gap-1.5 rounded-xl border border-purple-500/40 bg-purple-500/10 px-3.5 py-2.5 text-xs font-bold text-purple-300 hover:bg-purple-500/20 transition"
+                >
+                  <QrCode className="h-4 w-4 text-purple-400" />
+                  <span>QR Code Mesa</span>
+                </button>
               </div>
             </div>
 
