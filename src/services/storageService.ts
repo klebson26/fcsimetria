@@ -140,7 +140,9 @@ function setItem<T>(key: string, value: T) {
     const docName = KEY_TO_FIRESTORE_DOC[key];
     if (docName) {
       setDoc(doc(db, 'feira_dados', docName), { payload: value, updatedAt: new Date().toISOString() })
-        .catch((err) => console.warn(`Firestore sync warning for ${docName}:`, err));
+        .catch(() => {
+          // Operate seamlessly in local cache mode when offline
+        });
     }
   } catch (err) {
     console.error(`Error writing ${key} to localStorage:`, err);
@@ -354,8 +356,30 @@ export function getSecoes(): SecaoSite[] {
   return getItem<SecaoSite[]>(KEYS.SECOES, INITIAL_SECOES);
 }
 
+export function applyThemeMode(modo: 'escuro' | 'claro') {
+  if (typeof document === 'undefined') return;
+  const root = document.documentElement;
+  if (modo === 'claro') {
+    root.classList.add('light');
+    root.classList.remove('dark');
+  } else {
+    root.classList.add('dark');
+    root.classList.remove('light');
+  }
+}
+
 export function getAparencia(): ConfigAparencia {
-  return getItem<ConfigAparencia>(KEYS.APARENCIA, INITIAL_APARENCIA);
+  const config = getItem<ConfigAparencia>(KEYS.APARENCIA, INITIAL_APARENCIA);
+  applyThemeMode(config.modoTema || 'escuro');
+  return config;
+}
+
+export function toggleThemeMode(): 'escuro' | 'claro' {
+  const current = getAparencia();
+  const nextMode: 'escuro' | 'claro' = current.modoTema === 'claro' ? 'escuro' : 'claro';
+  const updated = { ...current, modoTema: nextMode };
+  saveAparencia(updated);
+  return nextMode;
 }
 
 export function getIdentidade(): ConfigIdentidade {
@@ -476,6 +500,7 @@ export function saveLiberdade(content: LiberdadeContent) {
 
 export function saveAparencia(config: ConfigAparencia) {
   setItem(KEYS.APARENCIA, config);
+  applyThemeMode(config.modoTema || 'escuro');
   logAuditAction('Atualizou o tema e aparência do site', config.tema, 'Aparência');
 }
 

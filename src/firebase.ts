@@ -1,5 +1,12 @@
 import { initializeApp, getApps } from 'firebase/app';
-import { initializeFirestore, getFirestore, doc, getDoc } from 'firebase/firestore';
+import {
+  initializeFirestore,
+  getFirestore,
+  persistentLocalCache,
+  persistentMultipleTabManager,
+  doc,
+  getDoc
+} from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
 import firebaseConfig from '../firebase-applet-config.json';
 
@@ -13,21 +20,34 @@ let firestoreInstance;
 try {
   firestoreInstance = initializeFirestore(app, {
     experimentalAutoDetectLongPolling: true,
+    localCache: persistentLocalCache({
+      tabManager: persistentMultipleTabManager()
+    })
   }, databaseId);
 } catch {
-  firestoreInstance = databaseId ? getFirestore(app, databaseId) : getFirestore(app);
+  try {
+    firestoreInstance = initializeFirestore(app, {
+      experimentalAutoDetectLongPolling: true
+    }, databaseId);
+  } catch {
+    firestoreInstance = databaseId ? getFirestore(app, databaseId) : getFirestore(app);
+  }
 }
 
 export const db = firestoreInstance;
 export const auth = getAuth(app);
 
-// Safe connectivity checker without forcing network errors
+// Safe connectivity checker with timeout to prevent hanging or throwing unavailable errors
 export async function testConnection(): Promise<boolean> {
   try {
-    await getDoc(doc(db, 'identidade', 'configuracao'));
+    const fetchPromise = getDoc(doc(db, 'feira_dados', 'identidade'));
+    const timeoutPromise = new Promise((_, reject) =>
+      setTimeout(() => reject(new Error('Connection timeout')), 3000)
+    );
+    await Promise.race([fetchPromise, timeoutPromise]);
     return true;
-  } catch (error) {
-    console.debug('Firestore connectivity notice:', error);
+  } catch {
+    console.debug('Firestore operating in local/offline mode.');
     return false;
   }
 }

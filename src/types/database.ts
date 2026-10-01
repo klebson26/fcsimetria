@@ -198,6 +198,7 @@ export interface SecaoSite {
 }
 
 export interface ConfigAparencia {
+  modoTema?: 'escuro' | 'claro';
   tema: ThemeStyle;
   corPrimaria: string;
   corSecundaria: string;

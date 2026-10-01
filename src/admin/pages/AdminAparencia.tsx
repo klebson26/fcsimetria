@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { getAparencia, saveAparencia, subscribeStorage } from '../../services/storageService';
 import { ConfigAparencia, ThemeStyle } from '../../types/database';
-import { Eye, Sparkles, Check } from 'lucide-react';
+import { Eye, Sparkles, Check, Sun, Moon } from 'lucide-react';
 
 export const AdminAparencia: React.FC = () => {
   const [aparencia, setAparencia] = useState<ConfigAparencia>(getAparencia());
@@ -45,6 +45,52 @@ export const AdminAparencia: React.FC = () => {
       )}
 
       <form onSubmit={handleSave} className="space-y-6">
+        {/* Modo de Cor: Escuro vs Claro */}
+        <div className="rounded-2xl border border-slate-800 bg-slate-900 p-6 space-y-4">
+          <h3 className="font-serif text-lg font-bold text-white flex items-center gap-2">
+            <Sun className="h-5 w-5 text-amber-400" /> Modo de Cor do Site (Escuro / Claro)
+          </h3>
+          <p className="text-xs text-slate-400">
+            Defina a preferência de cor base para todos os visitantes do site da feira.
+          </p>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div
+              onClick={() => setAparencia({ ...aparencia, modoTema: 'escuro' })}
+              className={`rounded-2xl border-2 p-5 space-y-3 cursor-pointer transition flex items-center gap-4 ${
+                (aparencia.modoTema || 'escuro') === 'escuro'
+                  ? 'border-amber-500 bg-amber-500/10 shadow-xl shadow-amber-500/10'
+                  : 'border-slate-800 bg-slate-950 hover:border-slate-700'
+              }`}
+            >
+              <div className="h-12 w-12 rounded-xl bg-slate-950 border border-slate-800 flex items-center justify-center text-amber-400 shrink-0">
+                <Moon className="h-6 w-6" />
+              </div>
+              <div>
+                <h4 className="font-bold text-sm text-white">Modo Escuro (Dark Mode)</h4>
+                <p className="text-[11px] text-slate-400">Fundo azul/grafite escuro e textos claros, ideal para projeções e totens da feira.</p>
+              </div>
+            </div>
+
+            <div
+              onClick={() => setAparencia({ ...aparencia, modoTema: 'claro' })}
+              className={`rounded-2xl border-2 p-5 space-y-3 cursor-pointer transition flex items-center gap-4 ${
+                aparencia.modoTema === 'claro'
+                  ? 'border-amber-500 bg-amber-500/10 shadow-xl shadow-amber-500/10'
+                  : 'border-slate-800 bg-slate-950 hover:border-slate-700'
+              }`}
+            >
+              <div className="h-12 w-12 rounded-xl bg-amber-100 border border-amber-300 flex items-center justify-center text-amber-600 shrink-0">
+                <Sun className="h-6 w-6" />
+              </div>
+              <div>
+                <h4 className="font-bold text-sm text-white">Modo Claro (Light Mode)</h4>
+                <p className="text-[11px] text-slate-400">Fundo limpo e claro com alto contraste, ideal para leitura diurna e navegação mobile.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
         {/* Selector de Temas */}
         <div className="rounded-2xl border border-slate-800 bg-slate-900 p-6 space-y-4">
           <h3 className="font-serif text-lg font-bold text-white flex items-center gap-2">

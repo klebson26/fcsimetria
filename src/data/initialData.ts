@@ -756,6 +756,7 @@ export const INITIAL_SECOES: SecaoSite[] = [
 ];
 
 export const INITIAL_APARENCIA: ConfigAparencia = {
+  modoTema: 'escuro',
   tema: 'FUTURISTA',
   corPrimaria: '#3B82F6',
   corSecundaria: '#8B5CF6',

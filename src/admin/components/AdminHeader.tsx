@@ -1,6 +1,6 @@
-import React from 'react';
-import { getAuthSession, setAuthSession } from '../../services/storageService';
-import { Search, ExternalLink, LogOut, Menu as MenuIcon, User } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { getAuthSession, setAuthSession, getAparencia, toggleThemeMode, subscribeStorage } from '../../services/storageService';
+import { Search, ExternalLink, LogOut, Menu as MenuIcon, User, Sun, Moon } from 'lucide-react';
 
 interface AdminHeaderProps {
   onOpenMobileMenu: () => void;
@@ -16,6 +16,13 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({
   onSearchChange
 }) => {
   const session = getAuthSession();
+  const [aparencia, setAparencia] = useState(getAparencia());
+
+  useEffect(() => {
+    return subscribeStorage(() => {
+      setAparencia(getAparencia());
+    });
+  }, []);
 
   const handleLogout = () => {
     setAuthSession(null);
@@ -23,7 +30,7 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({
   };
 
   return (
-    <header className="sticky top-0 z-30 flex h-16 w-full items-center justify-between border-b border-slate-800 bg-slate-950/90 px-4 sm:px-8 backdrop-blur-md">
+    <header className="sticky top-0 z-30 flex h-16 w-full overflow-x-clip items-center justify-between border-b border-slate-800 bg-slate-950/90 px-3 sm:px-8 backdrop-blur-md">
       <div className="flex items-center gap-3">
         <button
           onClick={onOpenMobileMenu}
@@ -46,6 +53,19 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({
       </div>
 
       <div className="flex items-center gap-3">
+        {/* Dark / Light Theme Toggle */}
+        <button
+          onClick={() => toggleThemeMode()}
+          title={aparencia.modoTema === 'claro' ? 'Alternar para Modo Escuro' : 'Alternar para Modo Claro'}
+          className="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-800 bg-slate-900 text-amber-400 hover:border-amber-500/40 transition"
+        >
+          {aparencia.modoTema === 'claro' ? (
+            <Moon className="h-4 w-4 text-slate-700" />
+          ) : (
+            <Sun className="h-4 w-4 text-amber-400" />
+          )}
+        </button>
+
         {/* View Public Site button */}
         <button
           onClick={onNavigateToPublicSite}
