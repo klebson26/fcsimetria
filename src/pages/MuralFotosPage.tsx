@@ -29,7 +29,10 @@ import {
   RefreshCw,
   RotateCcw,
   Timer,
-  AlertCircle
+  AlertCircle,
+  HelpCircle,
+  Smartphone,
+  ChevronDown
 } from 'lucide-react';
 
 interface MuralFotosPageProps {
@@ -53,10 +56,11 @@ export const MuralFotosPage: React.FC<MuralFotosPageProps> = ({
   // Camera States
   const [isCameraActive, setIsCameraActive] = useState(false);
   const [facingMode, setFacingMode] = useState<'user' | 'environment'>('user');
-  const [cameraError, setCameraError] = useState<string | null>(null);
+  const [cameraError, setCameraError] = useState<'BLOCKED' | 'NOT_FOUND' | 'GENERIC' | null>(null);
   const [countdown, setCountdown] = useState<number | null>(null);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [flashAnimation, setFlashAnimation] = useState(false);
+  const [showHelpInstructions, setShowHelpInstructions] = useState(false);
 
   // Form States
   const [formNome, setFormNome] = useState('');
@@ -68,6 +72,7 @@ export const MuralFotosPage: React.FC<MuralFotosPageProps> = ({
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
+  const nativeCameraInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -84,26 +89,17 @@ export const MuralFotosPage: React.FC<MuralFotosPageProps> = ({
     };
   }, []);
 
-  // Handle camera activation when modal opens
-  useEffect(() => {
-    if (isCameraModalOpen && !previewImage) {
-      startCamera(facingMode);
-    } else {
-      stopCamera();
-    }
-  }, [isCameraModalOpen, previewImage]);
-
   const startCamera = async (mode: 'user' | 'environment') => {
     stopCamera();
     setCameraError(null);
     try {
       if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-        throw new Error('Navegador não suporta captura direta de câmera.');
+        throw new Error('NO_GET_USER_MEDIA');
       }
 
       const stream = await navigator.mediaDevices.getUserMedia({
         video: {
-          facingMode: mode,
+          facingMode: { ideal: mode },
           width: { ideal: 1280 },
           height: { ideal: 960 }
         },
@@ -113,11 +109,11 @@ export const MuralFotosPage: React.FC<MuralFotosPageProps> = ({
       streamRef.current = stream;
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
-        videoRef.current.play();
+        videoRef.current.play().catch((e) => console.log('Video play deferred:', e));
       }
       setIsCameraActive(true);
     } catch (err: any) {
-      console.warn('Tentativa com facingMode falhou, tentando fallback genérico:', err);
+      console.warn('Tentando fallback simplificado de câmera:', err);
       try {
         const fallbackStream = await navigator.mediaDevices.getUserMedia({
           video: true,
@@ -126,18 +122,19 @@ export const MuralFotosPage: React.FC<MuralFotosPageProps> = ({
         streamRef.current = fallbackStream;
         if (videoRef.current) {
           videoRef.current.srcObject = fallbackStream;
-          videoRef.current.play();
+          videoRef.current.play().catch((e) => console.log('Fallback video play:', e));
         }
         setIsCameraActive(true);
       } catch (fallbackErr: any) {
-        console.error('Erro final ao acessar câmera:', fallbackErr);
-        const isDenied =
-          fallbackErr.name === 'NotAllowedError' || fallbackErr.name === 'PermissionDeniedError';
-        setCameraError(
-          isDenied
-            ? 'Acesso à câmera foi bloqueado. Por favor, autorize a câmera nas permissões do seu navegador para tirar fotos na feira.'
-            : 'Não foi possível iniciar a câmera do dispositivo. Verifique se a câmera está conectada e não está em uso por outro aplicativo.'
-        );
+        console.error('Falha de inicialização da câmera:', fallbackErr);
+        const errName = fallbackErr.name || err.name;
+        if (errName === 'NotAllowedError' || errName === 'PermissionDeniedError') {
+          setCameraError('BLOCKED');
+        } else if (errName === 'NotFoundError' || errName === 'DevicesNotFoundError') {
+          setCameraError('NOT_FOUND');
+        } else {
+          setCameraError('GENERIC');
+        }
         setIsCameraActive(false);
       }
     }
@@ -154,6 +151,18 @@ export const MuralFotosPage: React.FC<MuralFotosPageProps> = ({
     setIsCameraActive(false);
   };
 
+  const handleOpenLiveCamera = () => {
+    playClickSound();
+    setPreviewImage(null);
+    setIsCameraModalOpen(true);
+    startCamera(facingMode);
+  };
+
+  const handleOpenNativeCamera = () => {
+    playClickSound();
+    nativeCameraInputRef.current?.click();
+  };
+
   const handleSwitchCamera = () => {
     playClickSound();
     const nextMode = facingMode === 'user' ? 'environment' : 'user';
@@ -161,6 +170,7 @@ export const MuralFotosPage: React.FC<MuralFotosPageProps> = ({
     startCamera(nextMode);
   };
 
+  // Capture from live video stream
   const handleCapturePhoto = () => {
     if (!videoRef.current) return;
     const video = videoRef.current;
@@ -168,7 +178,6 @@ export const MuralFotosPage: React.FC<MuralFotosPageProps> = ({
 
     playClickSound();
 
-    // Trigger visual flash
     setFlashAnimation(true);
     setTimeout(() => setFlashAnimation(false), 200);
 
@@ -178,17 +187,15 @@ export const MuralFotosPage: React.FC<MuralFotosPageProps> = ({
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    // Mirror selfie mode if front camera
     if (facingMode === 'user') {
       ctx.translate(canvas.width, 0);
       ctx.scale(-1, 1);
     }
     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-    // Reset transform for watermark overlay
     ctx.setTransform(1, 0, 0, 1, 0, 0);
 
-    // School official watermark band
+    // Add official school banner watermark
     const bannerHeight = Math.max(48, Math.round(canvas.height * 0.08));
     ctx.fillStyle = 'rgba(2, 6, 23, 0.85)';
     ctx.fillRect(0, canvas.height - bannerHeight, canvas.width, bannerHeight);
@@ -207,6 +214,63 @@ export const MuralFotosPage: React.FC<MuralFotosPageProps> = ({
     const dataUrl = canvas.toDataURL('image/jpeg', 0.88);
     setPreviewImage(dataUrl);
     stopCamera();
+  };
+
+  // Capture directly via device native camera input
+  const handleNativeCameraCapture = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const maxDimension = 1280;
+        let width = img.width;
+        let height = img.height;
+
+        if (width > maxDimension || height > maxDimension) {
+          if (width > height) {
+            height = Math.round((height * maxDimension) / width);
+            width = maxDimension;
+          } else {
+            width = Math.round((width * maxDimension) / height);
+            height = maxDimension;
+          }
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return;
+
+        ctx.drawImage(img, 0, 0, width, height);
+
+        // Watermark band
+        const bannerHeight = Math.max(48, Math.round(canvas.height * 0.08));
+        ctx.fillStyle = 'rgba(2, 6, 23, 0.85)';
+        ctx.fillRect(0, canvas.height - bannerHeight, canvas.width, bannerHeight);
+
+        ctx.fillStyle = '#f59e0b';
+        ctx.font = `bold ${Math.max(14, Math.round(bannerHeight * 0.38))}px sans-serif`;
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'middle';
+        const textLeft = Math.round(canvas.width * 0.04);
+        ctx.fillText(
+          `${identidade.nomeColegio.toUpperCase()} • ${identidade.nomeFeira.toUpperCase()} ${identidade.anoFeira || '2026'}`,
+          textLeft,
+          canvas.height - bannerHeight / 2
+        );
+
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.88);
+        setPreviewImage(dataUrl);
+        setIsCameraModalOpen(true);
+      };
+      img.src = event.target?.result as string;
+    };
+    reader.readAsDataURL(file);
+    e.target.value = '';
   };
 
   const handleStartTimerCapture = () => {
@@ -327,6 +391,16 @@ export const MuralFotosPage: React.FC<MuralFotosPageProps> = ({
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 font-sans selection:bg-amber-500 selection:text-slate-950 pb-20">
+      {/* Hidden input to directly trigger device native camera on any phone */}
+      <input
+        ref={nativeCameraInputRef}
+        type="file"
+        accept="image/*"
+        capture="environment"
+        onChange={handleNativeCameraCapture}
+        className="hidden"
+      />
+
       {/* Top Banner Navigation Bar */}
       <div className="sticky top-16 sm:top-[70px] z-30 border-b border-slate-800/80 bg-slate-950/90 backdrop-blur-xl px-4 py-3">
         <div className="mx-auto flex max-w-7xl items-center justify-between">
@@ -340,11 +414,11 @@ export const MuralFotosPage: React.FC<MuralFotosPageProps> = ({
 
           <div className="flex items-center gap-2">
             <button
-              onClick={() => setIsCameraModalOpen(true)}
+              onClick={handleOpenLiveCamera}
               className="flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 px-3.5 py-1.5 text-xs font-bold text-slate-950 shadow-md shadow-amber-500/20 hover:from-amber-400 hover:to-amber-500 transition"
             >
               <Camera className="h-4 w-4 fill-slate-950" />
-              <span>Abrir Câmera & Tirar Foto</span>
+              <span>Abrir Câmera</span>
             </button>
 
             <button
@@ -405,14 +479,23 @@ export const MuralFotosPage: React.FC<MuralFotosPageProps> = ({
               </div>
             </div>
 
-            {/* Direct Camera Shutter Trigger Button */}
+            {/* Direct Camera Shutter Trigger Buttons */}
             <div className="shrink-0 flex flex-col sm:flex-row gap-3">
               <button
-                onClick={() => setIsCameraModalOpen(true)}
-                className="flex items-center justify-center gap-2.5 rounded-2xl bg-gradient-to-r from-amber-500 to-amber-600 px-7 py-4 text-sm font-bold text-slate-950 shadow-xl shadow-amber-500/25 hover:from-amber-400 hover:to-amber-500 transition active:scale-98"
+                onClick={handleOpenLiveCamera}
+                className="flex items-center justify-center gap-2.5 rounded-2xl bg-gradient-to-r from-amber-500 to-amber-600 px-6 py-4 text-sm font-bold text-slate-950 shadow-xl shadow-amber-500/25 hover:from-amber-400 hover:to-amber-500 transition active:scale-98"
               >
                 <Camera className="h-5 w-5 fill-slate-950" />
-                <span>Abrir Câmera & Tirar Foto Agora</span>
+                <span>Abrir Câmera na Tela</span>
+              </button>
+
+              <button
+                onClick={handleOpenNativeCamera}
+                title="Tirar foto diretamente com o aplicativo de câmera nativo do celular"
+                className="flex items-center justify-center gap-2 rounded-2xl border border-amber-500/40 bg-slate-900/90 px-5 py-4 text-xs font-bold text-amber-300 hover:bg-amber-500/15 transition active:scale-98 shadow-md"
+              >
+                <Smartphone className="h-4 w-4 text-amber-400" />
+                <span>Câmera do Celular</span>
               </button>
             </div>
           </div>
@@ -497,13 +580,22 @@ export const MuralFotosPage: React.FC<MuralFotosPageProps> = ({
             <p className="text-xs text-slate-400 max-w-md mx-auto">
               Seja o primeiro a abrir a câmera e tirar uma foto para o mural!
             </p>
-            <button
-              onClick={() => setIsCameraModalOpen(true)}
-              className="inline-flex items-center gap-2 rounded-xl bg-amber-500 px-5 py-2.5 text-xs font-bold text-slate-950 hover:bg-amber-400 transition"
-            >
-              <Camera className="h-4 w-4" />
-              <span>Abrir Câmera</span>
-            </button>
+            <div className="flex justify-center gap-3">
+              <button
+                onClick={handleOpenLiveCamera}
+                className="inline-flex items-center gap-2 rounded-xl bg-amber-500 px-5 py-2.5 text-xs font-bold text-slate-950 hover:bg-amber-400 transition"
+              >
+                <Camera className="h-4 w-4" />
+                <span>Abrir Câmera</span>
+              </button>
+              <button
+                onClick={handleOpenNativeCamera}
+                className="inline-flex items-center gap-2 rounded-xl border border-slate-700 bg-slate-900 px-4 py-2.5 text-xs font-semibold text-slate-300 hover:text-white"
+              >
+                <Smartphone className="h-4 w-4 text-amber-400" />
+                <span>Câmera do Celular</span>
+              </button>
+            </div>
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
@@ -606,7 +698,7 @@ export const MuralFotosPage: React.FC<MuralFotosPageProps> = ({
                     {previewImage ? 'Confirmar e Publicar Foto' : 'Câmera da Feira Cultural'}
                   </h3>
                   <p className="text-[11px] text-slate-400">
-                    {previewImage ? 'Revise sua foto e adicione seu nome' : 'Enquadre o momento e aperte o botão de disparo'}
+                    {previewImage ? 'Revise sua foto e adicione seu nome' : 'Tire sua foto ao vivo para o mural oficial'}
                   </p>
                 </div>
               </div>
@@ -654,18 +746,86 @@ export const MuralFotosPage: React.FC<MuralFotosPageProps> = ({
                       {identidade.nomeColegio} • {identidade.nomeFeira} {identidade.anoFeira || '2026'}
                     </div>
 
-                    {/* Camera Error Message */}
+                    {/* SMART CAMERA ERROR & PERMISSION FALLBACK OVERLAY */}
                     {cameraError && (
-                      <div className="absolute inset-0 z-30 flex flex-col items-center justify-center p-6 text-center bg-slate-950/95 space-y-3">
-                        <AlertCircle className="h-10 w-10 text-amber-400" />
-                        <h4 className="font-bold text-sm text-white">Não foi possível abrir a câmera</h4>
-                        <p className="text-xs text-slate-300 max-w-sm leading-relaxed">{cameraError}</p>
-                        <button
-                          onClick={() => startCamera(facingMode)}
-                          className="mt-2 rounded-xl bg-amber-500 px-4 py-2 text-xs font-bold text-slate-950 hover:bg-amber-400 transition"
-                        >
-                          Tentar Novamente
-                        </button>
+                      <div className="absolute inset-0 z-30 flex flex-col items-center justify-center p-5 text-center bg-slate-950/98 space-y-3 overflow-y-auto">
+                        <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-500/10 text-amber-400 border border-amber-500/30 shrink-0">
+                          <Camera className="h-6 w-6" />
+                        </div>
+
+                        <div className="space-y-1">
+                          <h4 className="font-bold text-sm text-white">
+                            {cameraError === 'BLOCKED'
+                              ? 'Acesso à câmera bloqueado no navegador'
+                              : 'Não foi possível carregar a câmera na tela'}
+                          </h4>
+                          <p className="text-xs text-slate-300 max-w-sm leading-relaxed">
+                            {cameraError === 'BLOCKED'
+                              ? 'O navegador ou aplicativo bloqueou a transmissão direta da câmera. Use o botão abaixo para disparar com a câmera do seu aparelho sem bloqueio:'
+                              : 'Toque abaixo para abrir a câmera nativa do seu celular ou tablet:'}
+                          </p>
+                        </div>
+
+                        {/* Guaranteed Direct Native Camera Capture Button */}
+                        <div className="w-full max-w-xs space-y-2 pt-1">
+                          <button
+                            type="button"
+                            onClick={() => nativeCameraInputRef.current?.click()}
+                            className="w-full flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 px-4 py-3 text-xs font-bold text-slate-950 shadow-xl shadow-amber-500/25 hover:from-amber-400 hover:to-amber-500 transition active:scale-98"
+                          >
+                            <Camera className="h-4 w-4 fill-slate-950" />
+                            <span>Tirar Foto Direto no Aparelho</span>
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => startCamera(facingMode)}
+                            className="w-full flex items-center justify-center gap-1.5 rounded-xl border border-slate-700 bg-slate-900 px-4 py-2 text-xs font-semibold text-slate-300 hover:text-white hover:border-slate-600 transition"
+                          >
+                            <RefreshCw className="h-3.5 w-3.5" />
+                            <span>Tentar Novamente na Tela</span>
+                          </button>
+                        </div>
+
+                        {/* Step-by-step instructions toggle */}
+                        <div className="w-full max-w-xs pt-1">
+                          <button
+                            type="button"
+                            onClick={() => setShowHelpInstructions(!showHelpInstructions)}
+                            className="text-[11px] text-amber-400 hover:text-amber-300 underline font-medium flex items-center justify-center gap-1 mx-auto"
+                          >
+                            <HelpCircle className="h-3.5 w-3.5" />
+                            <span>Como permitir a câmera no navegador?</span>
+                            <ChevronDown
+                              className={`h-3 w-3 transition-transform ${
+                                showHelpInstructions ? 'rotate-180' : ''
+                              }`}
+                            />
+                          </button>
+
+                          {showHelpInstructions && (
+                            <div className="mt-2 rounded-xl border border-slate-800 bg-slate-900 p-3 text-left text-[11px] text-slate-300 space-y-2 shadow-lg animate-fade-in">
+                              <div>
+                                <span className="font-bold text-amber-400 block">🤖 No Chrome (Android ou PC):</span>
+                                <p className="text-slate-400 text-[10px] mt-0.5">
+                                  Toque no ícone de configurações/cadeado 🔒 ao lado da barra de endereço &gt; Permissões &gt; Câmera &gt; selecione <strong>Permitir</strong> e recarregue.
+                                </p>
+                              </div>
+                              <div>
+                                <span className="font-bold text-amber-400 block">🍏 No Safari (iPhone ou iPad):</span>
+                                <p className="text-slate-400 text-[10px] mt-0.5">
+                                  Toque em <strong>aA</strong> na barra de endereço &gt; Ajustes do Site &gt; Câmera &gt; selecione <strong>Permitir</strong>.
+                                </p>
+                              </div>
+                              <div>
+                                <span className="font-bold text-amber-400 block">💬 Se abriu pelo WhatsApp ou Instagram:</span>
+                                <p className="text-slate-400 text-[10px] mt-0.5">
+                                  Toque no menu (3 pontinhos no canto superior) e selecione <em>"Abrir no Chrome"</em> ou <em>"Abrir no Safari"</em>.
+                                </p>
+                              </div>
+                            </div>
+                          )}
+                        </div>
                       </div>
                     )}
 
@@ -682,46 +842,62 @@ export const MuralFotosPage: React.FC<MuralFotosPageProps> = ({
                   </div>
 
                   {/* Shutter Action Controls (Under Viewfinder) */}
-                  <div className="flex items-center justify-center gap-6 py-2">
-                    {/* Timer 3s Trigger */}
-                    <button
-                      type="button"
-                      disabled={!isCameraActive || !!cameraError || countdown !== null}
-                      onClick={handleStartTimerCapture}
-                      title="Timer de 3 segundos para se preparar"
-                      className="flex flex-col items-center gap-1 text-[11px] font-semibold text-slate-400 hover:text-amber-400 transition disabled:opacity-40"
-                    >
-                      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-800 border border-slate-700">
-                        <Timer className="h-4 w-4" />
-                      </div>
-                      <span>Timer 3s</span>
-                    </button>
+                  {!cameraError && (
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-center gap-6 py-2">
+                        {/* Timer 3s Trigger */}
+                        <button
+                          type="button"
+                          disabled={!isCameraActive || countdown !== null}
+                          onClick={handleStartTimerCapture}
+                          title="Timer de 3 segundos para se preparar"
+                          className="flex flex-col items-center gap-1 text-[11px] font-semibold text-slate-400 hover:text-amber-400 transition disabled:opacity-40"
+                        >
+                          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-800 border border-slate-700">
+                            <Timer className="h-4 w-4" />
+                          </div>
+                          <span>Timer 3s</span>
+                        </button>
 
-                    {/* BIG ROUND CAMERA SHUTTER BUTTON */}
-                    <button
-                      type="button"
-                      disabled={!isCameraActive || !!cameraError || countdown !== null}
-                      onClick={handleCapturePhoto}
-                      title="Tirar Foto Agora"
-                      className="group relative flex h-18 w-18 sm:h-20 sm:w-20 items-center justify-center rounded-full border-4 border-white/80 bg-slate-950 shadow-2xl transition hover:border-amber-400 active:scale-90 disabled:opacity-40"
-                    >
-                      <div className="h-14 w-14 sm:h-15 sm:w-15 rounded-full bg-gradient-to-tr from-amber-500 to-amber-400 group-hover:from-amber-400 group-hover:to-amber-300 shadow-lg" />
-                    </button>
+                        {/* BIG ROUND CAMERA SHUTTER BUTTON */}
+                        <button
+                          type="button"
+                          disabled={!isCameraActive || countdown !== null}
+                          onClick={handleCapturePhoto}
+                          title="Tirar Foto Agora"
+                          className="group relative flex h-18 w-18 sm:h-20 sm:w-20 items-center justify-center rounded-full border-4 border-white/80 bg-slate-950 shadow-2xl transition hover:border-amber-400 active:scale-90 disabled:opacity-40"
+                        >
+                          <div className="h-14 w-14 sm:h-15 sm:w-15 rounded-full bg-gradient-to-tr from-amber-500 to-amber-400 group-hover:from-amber-400 group-hover:to-amber-300 shadow-lg" />
+                        </button>
 
-                    {/* Flip Camera Button */}
-                    <button
-                      type="button"
-                      disabled={!isCameraActive || !!cameraError}
-                      onClick={handleSwitchCamera}
-                      title="Alternar Câmera"
-                      className="flex flex-col items-center gap-1 text-[11px] font-semibold text-slate-400 hover:text-amber-400 transition disabled:opacity-40"
-                    >
-                      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-800 border border-slate-700">
-                        <RefreshCw className="h-4 w-4" />
+                        {/* Flip Camera Button */}
+                        <button
+                          type="button"
+                          disabled={!isCameraActive}
+                          onClick={handleSwitchCamera}
+                          title="Alternar Câmera"
+                          className="flex flex-col items-center gap-1 text-[11px] font-semibold text-slate-400 hover:text-amber-400 transition disabled:opacity-40"
+                        >
+                          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-800 border border-slate-700">
+                            <RefreshCw className="h-4 w-4" />
+                          </div>
+                          <span>Inverter</span>
+                        </button>
                       </div>
-                      <span>Inverter</span>
-                    </button>
-                  </div>
+
+                      {/* Small helper link for direct native camera trigger */}
+                      <p className="text-center text-[11px] text-slate-400">
+                        Prefere usar a câmera do seu celular?{' '}
+                        <button
+                          type="button"
+                          onClick={() => nativeCameraInputRef.current?.click()}
+                          className="text-amber-400 font-bold underline hover:text-amber-300"
+                        >
+                          Toque aqui
+                        </button>
+                      </p>
+                    </div>
+                  )}
                 </div>
               ) : (
                 /* CAPTURED PHOTO REVIEW & PUBLISH FORM */
