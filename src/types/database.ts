@@ -291,6 +291,7 @@ export interface FotoMural {
   curtidas: number;
   dataCriacao: string;
   localFeira?: string; // 'Estande Av. Paulista', 'Mercadão', 'Bairro da Liberdade', 'Área Geral'
+  cenarioFundo?: 'paulista' | 'mercadao' | 'liberdade' | 'padrao';
   destaque?: boolean;
 }
 

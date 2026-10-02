@@ -29,16 +29,65 @@ import {
   RefreshCw,
   RotateCcw,
   Timer,
-  AlertCircle,
-  HelpCircle,
   Smartphone,
-  ChevronDown
+  ChevronDown,
+  Layers,
+  HelpCircle,
+  Building2,
+  Utensils,
+  Compass
 } from 'lucide-react';
 
 interface MuralFotosPageProps {
   onBackToHome: () => void;
   onOpenQRCodeModal: (topic?: string) => void;
 }
+
+export type CenarioFundoId = 'paulista' | 'mercadao' | 'liberdade';
+
+export interface CenarioConfig {
+  id: CenarioFundoId;
+  nome: string;
+  tag: string;
+  icone: string;
+  imagemUrl: string;
+  corHex: string;
+  descricao: string;
+  localPadrao: string;
+}
+
+export const CENARIOS_FUNDO: CenarioConfig[] = [
+  {
+    id: 'paulista',
+    nome: 'Avenida Paulista',
+    tag: 'Av. Paulista',
+    icone: '🏛️',
+    imagemUrl: '/images/paulista_avenue_1790701728460.jpg',
+    corHex: '#f43f5e',
+    descricao: 'MASP, ciclovia e o horizonte moderno de São Paulo',
+    localPadrao: 'Estande Av. Paulista'
+  },
+  {
+    id: 'mercadao',
+    nome: 'Mercadão de SP',
+    tag: 'Mercadão Municipal',
+    icone: '🥪',
+    imagemUrl: '/images/mercadao_sp_1790701738265.jpg',
+    corHex: '#f59e0b',
+    descricao: 'Vitrais alemães, arquitetura histórica e gastronomia',
+    localPadrao: 'Mercadão Municipal'
+  },
+  {
+    id: 'liberdade',
+    nome: 'Bairro da Liberdade',
+    tag: 'Bairro da Liberdade',
+    icone: '🏮',
+    imagemUrl: '/images/liberdade_japantown_1790701747719.jpg',
+    corHex: '#ec4899',
+    descricao: 'Torii oriental, lanternas Suzuran e cultura asiática',
+    localPadrao: 'Bairro da Liberdade'
+  }
+];
 
 export const MuralFotosPage: React.FC<MuralFotosPageProps> = ({
   onBackToHome,
@@ -53,6 +102,11 @@ export const MuralFotosPage: React.FC<MuralFotosPageProps> = ({
   const [searchQuery, setSearchQuery] = useState('');
   const session = getAuthSession();
 
+  // Background Scenarios
+  const [selectedCenario, setSelectedCenario] = useState<CenarioFundoId>('paulista');
+  const [rawCapturedPhoto, setRawCapturedPhoto] = useState<string | null>(null);
+  const [isComposing, setIsComposing] = useState(false);
+
   // Camera States
   const [isCameraActive, setIsCameraActive] = useState(false);
   const [facingMode, setFacingMode] = useState<'user' | 'environment'>('user');
@@ -65,7 +119,7 @@ export const MuralFotosPage: React.FC<MuralFotosPageProps> = ({
   // Form States
   const [formNome, setFormNome] = useState('');
   const [formRelacao, setFormRelacao] = useState('Visitante');
-  const [formLocal, setFormLocal] = useState('Área Geral');
+  const [formLocal, setFormLocal] = useState('Estande Av. Paulista');
   const [formMensagem, setFormMensagem] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [feedbackSuccess, setFeedbackSuccess] = useState(false);
@@ -82,12 +136,213 @@ export const MuralFotosPage: React.FC<MuralFotosPageProps> = ({
     });
   }, []);
 
-  // Stop camera stream when component unmounts
   useEffect(() => {
     return () => {
       stopCamera();
     };
   }, []);
+
+  // Update default fair booth when scenario changes
+  useEffect(() => {
+    const cenarioObj = CENARIOS_FUNDO.find((c) => c.id === selectedCenario);
+    if (cenarioObj) {
+      setFormLocal(cenarioObj.localPadrao);
+    }
+  }, [selectedCenario]);
+
+  // When raw photo or chosen background changes, compose the final picture with chosen landmark
+  const composeThematicPhoto = async (
+    rawPhotoDataUrl: string,
+    cenarioId: CenarioFundoId
+  ): Promise<string> => {
+    return new Promise((resolve) => {
+      const visitorImg = new Image();
+      visitorImg.crossOrigin = 'anonymous';
+
+      visitorImg.onload = () => {
+        const cenario = CENARIOS_FUNDO.find((c) => c.id === cenarioId) || CENARIOS_FUNDO[0];
+        const bgImg = new Image();
+        bgImg.crossOrigin = 'anonymous';
+
+        bgImg.onload = () => {
+          // Output Canvas: 1080 x 1350 (4:5 vertical photo booth portrait)
+          const canvas = document.createElement('canvas');
+          canvas.width = 1080;
+          canvas.height = 1350;
+          const ctx = canvas.getContext('2d');
+          if (!ctx) {
+            resolve(rawPhotoDataUrl);
+            return;
+          }
+
+          // 1. Draw Scenic Landmark Background (Cover fit)
+          const bgAspect = bgImg.width / bgImg.height;
+          const canvasAspect = canvas.width / canvas.height;
+          let sWidth = bgImg.width;
+          let sHeight = bgImg.height;
+          let sx = 0;
+          let sy = 0;
+
+          if (bgAspect > canvasAspect) {
+            sWidth = bgImg.height * canvasAspect;
+            sx = (bgImg.width - sWidth) / 2;
+          } else {
+            sHeight = bgImg.width / canvasAspect;
+            sy = (bgImg.height - sHeight) / 2;
+          }
+          ctx.drawImage(bgImg, sx, sy, sWidth, sHeight, 0, 0, canvas.width, canvas.height);
+
+          // 2. Artistic Vignette & Gradient Scrim for Contrast
+          const grad = ctx.createLinearGradient(0, 0, 0, canvas.height);
+          grad.addColorStop(0, 'rgba(2, 6, 23, 0.75)');
+          grad.addColorStop(0.25, 'rgba(2, 6, 23, 0.2)');
+          grad.addColorStop(0.75, 'rgba(2, 6, 23, 0.35)');
+          grad.addColorStop(1, 'rgba(2, 6, 23, 0.95)');
+          ctx.fillStyle = grad;
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+          // 3. Header Landmark Badge (Top center)
+          ctx.save();
+          ctx.shadowColor = 'rgba(0, 0, 0, 0.7)';
+          ctx.shadowBlur = 16;
+          ctx.fillStyle = 'rgba(15, 23, 42, 0.88)';
+          ctx.beginPath();
+          const headerW = 740;
+          const headerH = 68;
+          const headerX = (canvas.width - headerW) / 2;
+          const headerY = 44;
+          ctx.roundRect(headerX, headerY, headerW, headerH, 34);
+          ctx.fill();
+          ctx.strokeStyle = cenario.corHex;
+          ctx.lineWidth = 3.5;
+          ctx.stroke();
+
+          ctx.fillStyle = '#ffffff';
+          ctx.font = 'bold 24px sans-serif';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText(
+            `${cenario.icone}  ${cenario.tag.toUpperCase()} • SÃO PAULO`,
+            canvas.width / 2,
+            headerY + headerH / 2
+          );
+          ctx.restore();
+
+          // 4. Polaroid / Photo Frame for Visitor Image
+          const cardMarginX = 60;
+          const cardY = 142;
+          const cardW = canvas.width - cardMarginX * 2; // 960px
+          const cardH = 1045;
+
+          ctx.save();
+          ctx.shadowColor = 'rgba(0, 0, 0, 0.75)';
+          ctx.shadowBlur = 38;
+          ctx.shadowOffsetY = 16;
+          ctx.fillStyle = '#ffffff';
+          ctx.beginPath();
+          ctx.roundRect(cardMarginX, cardY, cardW, cardH, 28);
+          ctx.fill();
+          ctx.restore();
+
+          // 5. Draw visitor photo inside frame
+          const photoPadding = 16;
+          const photoX = cardMarginX + photoPadding;
+          const photoY = cardY + photoPadding;
+          const photoW = cardW - photoPadding * 2;
+          const photoH = cardH - 126;
+
+          ctx.save();
+          ctx.beginPath();
+          ctx.roundRect(photoX, photoY, photoW, photoH, 20);
+          ctx.clip();
+
+          // Cover fit visitor photo inside inner rect
+          const vAspect = visitorImg.width / visitorImg.height;
+          const pAspect = photoW / photoH;
+          let vsWidth = visitorImg.width;
+          let vsHeight = visitorImg.height;
+          let vsx = 0;
+          let vsy = 0;
+
+          if (vAspect > pAspect) {
+            vsWidth = visitorImg.height * pAspect;
+            vsx = (visitorImg.width - vsWidth) / 2;
+          } else {
+            vsHeight = visitorImg.width / pAspect;
+            vsy = (visitorImg.height - vsHeight) / 2;
+          }
+          ctx.drawImage(visitorImg, vsx, vsy, vsWidth, vsHeight, photoX, photoY, photoW, photoH);
+          ctx.restore();
+
+          // 6. Polaroid Bottom Caption & Landmark details
+          ctx.fillStyle = '#0f172a';
+          ctx.font = 'italic bold 28px serif';
+          ctx.textAlign = 'left';
+          ctx.textBaseline = 'middle';
+          ctx.fillText(cenario.nome, photoX + 16, cardY + cardH - 62);
+
+          ctx.fillStyle = '#64748b';
+          ctx.font = 'bold 16px sans-serif';
+          ctx.fillText(`Feira Cultural • ${identidade.anoFeira || '2026'}`, photoX + 16, cardY + cardH - 26);
+
+          // "Eu Estive Aqui!" stamp badge on bottom right of polaroid
+          ctx.save();
+          ctx.translate(cardMarginX + cardW - 148, cardY + cardH - 54);
+          ctx.rotate(-0.05);
+          ctx.fillStyle = cenario.corHex;
+          ctx.beginPath();
+          ctx.roundRect(-74, -22, 148, 44, 22);
+          ctx.fill();
+          ctx.fillStyle = '#ffffff';
+          ctx.font = 'bold 13px sans-serif';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText('★ ESTIVE AQUI ★', 0, 0);
+          ctx.restore();
+
+          // 7. Footer Official Fair Banner
+          ctx.fillStyle = 'rgba(2, 6, 23, 0.95)';
+          ctx.fillRect(0, canvas.height - 76, canvas.width, 76);
+
+          ctx.fillStyle = '#f59e0b';
+          ctx.font = 'bold 21px sans-serif';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText(
+            `${identidade.nomeColegio.toUpperCase()} • ${identidade.nomeFeira.toUpperCase()} ${identidade.anoFeira || '2026'}`,
+            canvas.width / 2,
+            canvas.height - 38
+          );
+
+          resolve(canvas.toDataURL('image/jpeg', 0.88));
+        };
+
+        bgImg.onerror = () => {
+          resolve(rawPhotoDataUrl);
+        };
+        bgImg.src = cenario.imagemUrl;
+      };
+
+      visitorImg.onerror = () => {
+        resolve(rawPhotoDataUrl);
+      };
+      visitorImg.src = rawPhotoDataUrl;
+    });
+  };
+
+  const handleChangeCenario = async (cenarioId: CenarioFundoId) => {
+    playClickSound();
+    setSelectedCenario(cenarioId);
+    if (rawCapturedPhoto) {
+      setIsComposing(true);
+      const composed = await composeThematicPhoto(
+        rawCapturedPhoto,
+        cenarioId
+      );
+      setPreviewImage(composed);
+      setIsComposing(false);
+    }
+  };
 
   const startCamera = async (mode: 'user' | 'environment') => {
     stopCamera();
@@ -154,6 +409,7 @@ export const MuralFotosPage: React.FC<MuralFotosPageProps> = ({
   const handleOpenLiveCamera = () => {
     playClickSound();
     setPreviewImage(null);
+    setRawCapturedPhoto(null);
     setIsCameraModalOpen(true);
     startCamera(facingMode);
   };
@@ -171,7 +427,7 @@ export const MuralFotosPage: React.FC<MuralFotosPageProps> = ({
   };
 
   // Capture from live video stream
-  const handleCapturePhoto = () => {
+  const handleCapturePhoto = async () => {
     if (!videoRef.current) return;
     const video = videoRef.current;
     if (video.videoWidth === 0 || video.videoHeight === 0) return;
@@ -193,27 +449,17 @@ export const MuralFotosPage: React.FC<MuralFotosPageProps> = ({
     }
     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-    ctx.setTransform(1, 0, 0, 1, 0, 0);
-
-    // Add official school banner watermark
-    const bannerHeight = Math.max(48, Math.round(canvas.height * 0.08));
-    ctx.fillStyle = 'rgba(2, 6, 23, 0.85)';
-    ctx.fillRect(0, canvas.height - bannerHeight, canvas.width, bannerHeight);
-
-    ctx.fillStyle = '#f59e0b';
-    ctx.font = `bold ${Math.max(14, Math.round(bannerHeight * 0.38))}px sans-serif`;
-    ctx.textAlign = 'left';
-    ctx.textBaseline = 'middle';
-    const textLeft = Math.round(canvas.width * 0.04);
-    ctx.fillText(
-      `${identidade.nomeColegio.toUpperCase()} • ${identidade.nomeFeira.toUpperCase()} ${identidade.anoFeira || '2026'}`,
-      textLeft,
-      canvas.height - bannerHeight / 2
-    );
-
-    const dataUrl = canvas.toDataURL('image/jpeg', 0.88);
-    setPreviewImage(dataUrl);
+    const rawData = canvas.toDataURL('image/jpeg', 0.9);
+    setRawCapturedPhoto(rawData);
     stopCamera();
+
+    setIsComposing(true);
+    const finalPhoto = await composeThematicPhoto(
+      rawData,
+      selectedCenario
+    );
+    setPreviewImage(finalPhoto);
+    setIsComposing(false);
   };
 
   // Capture directly via device native camera input
@@ -224,7 +470,7 @@ export const MuralFotosPage: React.FC<MuralFotosPageProps> = ({
     const reader = new FileReader();
     reader.onload = (event) => {
       const img = new Image();
-      img.onload = () => {
+      img.onload = async () => {
         const canvas = document.createElement('canvas');
         const maxDimension = 1280;
         let width = img.width;
@@ -246,26 +492,18 @@ export const MuralFotosPage: React.FC<MuralFotosPageProps> = ({
         if (!ctx) return;
 
         ctx.drawImage(img, 0, 0, width, height);
+        const rawData = canvas.toDataURL('image/jpeg', 0.9);
 
-        // Watermark band
-        const bannerHeight = Math.max(48, Math.round(canvas.height * 0.08));
-        ctx.fillStyle = 'rgba(2, 6, 23, 0.85)';
-        ctx.fillRect(0, canvas.height - bannerHeight, canvas.width, bannerHeight);
-
-        ctx.fillStyle = '#f59e0b';
-        ctx.font = `bold ${Math.max(14, Math.round(bannerHeight * 0.38))}px sans-serif`;
-        ctx.textAlign = 'left';
-        ctx.textBaseline = 'middle';
-        const textLeft = Math.round(canvas.width * 0.04);
-        ctx.fillText(
-          `${identidade.nomeColegio.toUpperCase()} • ${identidade.nomeFeira.toUpperCase()} ${identidade.anoFeira || '2026'}`,
-          textLeft,
-          canvas.height - bannerHeight / 2
-        );
-
-        const dataUrl = canvas.toDataURL('image/jpeg', 0.88);
-        setPreviewImage(dataUrl);
+        setRawCapturedPhoto(rawData);
         setIsCameraModalOpen(true);
+        setIsComposing(true);
+
+        const finalPhoto = await composeThematicPhoto(
+          rawData,
+          selectedCenario
+        );
+        setPreviewImage(finalPhoto);
+        setIsComposing(false);
       };
       img.src = event.target?.result as string;
     };
@@ -294,12 +532,14 @@ export const MuralFotosPage: React.FC<MuralFotosPageProps> = ({
   const handleRetakePhoto = () => {
     playClickSound();
     setPreviewImage(null);
+    setRawCapturedPhoto(null);
     startCamera(facingMode);
   };
 
   const handleCloseModal = () => {
     stopCamera();
     setPreviewImage(null);
+    setRawCapturedPhoto(null);
     setCountdown(null);
     setIsCameraModalOpen(false);
   };
@@ -314,7 +554,8 @@ export const MuralFotosPage: React.FC<MuralFotosPageProps> = ({
         autorNome: formNome.trim(),
         turmaOuRelacao: formRelacao,
         localFeira: formLocal,
-        mensagem: formMensagem.trim() || 'Registrando nossa presença na Feira Cultural Simetria!',
+        cenarioFundo: selectedCenario,
+        mensagem: formMensagem.trim() || `Registrando nossa lembrança na Feira Cultural ${identidade.anoFeira || '2026'}!`,
         fotoUrl: previewImage,
         destaque: false
       });
@@ -323,6 +564,7 @@ export const MuralFotosPage: React.FC<MuralFotosPageProps> = ({
       setFormNome('');
       setFormMensagem('');
       setPreviewImage(null);
+      setRawCapturedPhoto(null);
       setIsCameraModalOpen(false);
       setFeedbackSuccess(true);
       setTimeout(() => setFeedbackSuccess(false), 4500);
@@ -359,9 +601,9 @@ export const MuralFotosPage: React.FC<MuralFotosPageProps> = ({
 
   // Filters
   const filteredFotos = fotos.filter((f) => {
-    if (activeFilter === 'PAULISTA' && f.localFeira !== 'Estande Av. Paulista') return false;
-    if (activeFilter === 'MERCADAO' && f.localFeira !== 'Mercadão Municipal') return false;
-    if (activeFilter === 'LIBERDADE' && f.localFeira !== 'Bairro da Liberdade') return false;
+    if (activeFilter === 'PAULISTA' && f.cenarioFundo !== 'paulista' && f.localFeira !== 'Estande Av. Paulista') return false;
+    if (activeFilter === 'MERCADAO' && f.cenarioFundo !== 'mercadao' && f.localFeira !== 'Mercadão Municipal') return false;
+    if (activeFilter === 'LIBERDADE' && f.cenarioFundo !== 'liberdade' && f.localFeira !== 'Bairro da Liberdade') return false;
     if (activeFilter === 'DESTAQUES' && !f.destaque) return false;
 
     if (searchQuery.trim()) {
@@ -387,6 +629,10 @@ export const MuralFotosPage: React.FC<MuralFotosPageProps> = ({
     } catch {
       return 'Agora';
     }
+  };
+
+  const getCenarioInfo = (cenarioId?: string) => {
+    return CENARIOS_FUNDO.find((c) => c.id === cenarioId);
   };
 
   return (
@@ -441,14 +687,14 @@ export const MuralFotosPage: React.FC<MuralFotosPageProps> = ({
         </div>
       </div>
 
-      {/* Hero Section */}
+      {/* Hero Section with Landmark Backdrop Chooser */}
       <section className="relative overflow-hidden border-b border-slate-800/80 bg-radial from-amber-500/10 via-slate-950 to-slate-950">
-        <div className="mx-auto max-w-7xl px-4 py-12 sm:py-16">
+        <div className="mx-auto max-w-7xl px-4 py-10 sm:py-16">
           <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
             <div className="space-y-4 max-w-3xl">
               <div className="inline-flex items-center gap-2 rounded-full border border-amber-500/30 bg-amber-500/10 px-3.5 py-1 text-xs font-bold uppercase tracking-widest text-amber-400">
                 <Sparkles className="h-3.5 w-3.5" />
-                <span>Mural Vivo da Feira Cultural {identidade.anoFeira || '2026'}</span>
+                <span>Cabine Fotográfica & Mural Vivo {identidade.anoFeira || '2026'}</span>
               </div>
 
               <h1 className="font-serif text-3xl sm:text-5xl font-black tracking-tight text-white text-balance">
@@ -456,11 +702,53 @@ export const MuralFotosPage: React.FC<MuralFotosPageProps> = ({
               </h1>
 
               <p className="text-sm sm:text-base text-slate-300 leading-relaxed max-w-2xl">
-                Tire sua foto diretamente com a câmera do celular nos estandes da feira, registre seu momento em família ou com sua turma e faça parte do mural oficial do {identidade.nomeColegio}!
+                Tire sua foto com a câmera do aparelho e escolha seu cenário favorito de São Paulo: <strong className="text-rose-400">Avenida Paulista</strong>, <strong className="text-amber-400">Mercadão de SP</strong> ou <strong className="text-pink-400">Bairro da Liberdade</strong>!
               </p>
 
+              {/* 3 Scenic Landmark Background Cards preview */}
+              <div className="pt-2">
+                <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block mb-2">
+                  Escolha o cenário para a sua foto:
+                </span>
+                <div className="grid grid-cols-3 gap-2 sm:gap-3 max-w-lg">
+                  {CENARIOS_FUNDO.map((c) => (
+                    <button
+                      key={c.id}
+                      onClick={() => {
+                        playClickSound();
+                        setSelectedCenario(c.id);
+                        handleOpenLiveCamera();
+                      }}
+                      className={`group relative overflow-hidden rounded-2xl border p-2.5 sm:p-3 text-left transition flex flex-col justify-between ${
+                        selectedCenario === c.id
+                          ? 'border-amber-400 bg-slate-900 shadow-lg shadow-amber-500/15 ring-2 ring-amber-400/30'
+                          : 'border-slate-800 bg-slate-950/80 hover:border-slate-700'
+                      }`}
+                    >
+                      <div className="h-14 sm:h-16 w-full rounded-xl overflow-hidden mb-2 relative bg-slate-900">
+                        <img
+                          src={c.imagemUrl}
+                          alt={c.nome}
+                          className="h-full w-full object-cover group-hover:scale-105 transition"
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 to-transparent" />
+                        <span className="absolute bottom-1 left-1.5 text-base">
+                          {c.icone}
+                        </span>
+                      </div>
+                      <span className="text-xs font-bold text-white block truncate">
+                        {c.tag}
+                      </span>
+                      <span className="text-[10px] text-amber-400 font-semibold mt-0.5">
+                        Tirar foto com este fundo →
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
               {/* Stats badges */}
-              <div className="flex flex-wrap items-center gap-3 pt-2 text-xs font-mono">
+              <div className="flex flex-wrap items-center gap-3 pt-3 text-xs font-mono">
                 <div className="flex items-center gap-1.5 rounded-xl border border-slate-800 bg-slate-900/90 px-3 py-1.5 text-slate-300">
                   <ImageIcon className="h-4 w-4 text-amber-400" />
                   <span><strong>{fotos.length}</strong> fotos publicadas</span>
@@ -474,7 +762,7 @@ export const MuralFotosPage: React.FC<MuralFotosPageProps> = ({
                     <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
                     <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
                   </span>
-                  <span>Câmera e Mural ao Vivo</span>
+                  <span>Câmera e Cenários ao Vivo</span>
                 </div>
               </div>
             </div>
@@ -512,7 +800,7 @@ export const MuralFotosPage: React.FC<MuralFotosPageProps> = ({
               </div>
               <div>
                 <h4 className="font-bold text-sm">Foto publicada com sucesso no Mural!</h4>
-                <p className="text-xs text-emerald-400/90">Sua foto já está disponível ao vivo para todos os visitantes da feira.</p>
+                <p className="text-xs text-emerald-400/90">Sua lembrança temática já está disponível ao vivo para todos os visitantes.</p>
               </div>
             </div>
             <button
@@ -533,9 +821,9 @@ export const MuralFotosPage: React.FC<MuralFotosPageProps> = ({
             {[
               { id: 'TODAS', label: 'Todas as Fotos' },
               { id: 'DESTAQUES', label: '⭐ Destaques' },
-              { id: 'PAULISTA', label: 'Av. Paulista' },
-              { id: 'MERCADAO', label: 'Mercadão' },
-              { id: 'LIBERDADE', label: 'Liberdade' }
+              { id: 'PAULISTA', label: '🏛️ Av. Paulista' },
+              { id: 'MERCADAO', label: '🥪 Mercadão' },
+              { id: 'LIBERDADE', label: '🏮 Liberdade' }
             ].map((f) => (
               <button
                 key={f.id}
@@ -578,7 +866,7 @@ export const MuralFotosPage: React.FC<MuralFotosPageProps> = ({
             </div>
             <h3 className="font-serif text-xl font-bold text-white">Nenhuma foto encontrada</h3>
             <p className="text-xs text-slate-400 max-w-md mx-auto">
-              Seja o primeiro a abrir a câmera e tirar uma foto para o mural!
+              Seja o primeiro a abrir a câmera, escolher seu cenário e tirar uma foto para o mural!
             </p>
             <div className="flex justify-center gap-3">
               <button
@@ -599,86 +887,98 @@ export const MuralFotosPage: React.FC<MuralFotosPageProps> = ({
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {filteredFotos.map((item) => (
-              <div
-                key={item.id}
-                onClick={() => setSelectedPhoto(item)}
-                className="group relative flex flex-col overflow-hidden rounded-2xl border border-slate-800/80 bg-slate-900/90 shadow-xl hover:border-amber-500/50 hover:shadow-amber-500/10 transition cursor-pointer"
-              >
-                <div className="relative aspect-4/3 sm:aspect-square w-full overflow-hidden bg-slate-950">
-                  <img
-                    src={item.fotoUrl}
-                    alt={item.autorNome}
-                    className="h-full w-full object-cover group-hover:scale-105 transition duration-500"
-                    loading="lazy"
-                  />
+            {filteredFotos.map((item) => {
+              const cenario = getCenarioInfo(item.cenarioFundo);
 
-                  <div className="absolute top-3 left-3 right-3 flex items-center justify-between pointer-events-none">
-                    {item.localFeira && (
-                      <span className="rounded-full bg-slate-950/80 backdrop-blur-md px-2.5 py-0.5 text-[10px] font-bold text-amber-300 border border-amber-500/30">
-                        📍 {item.localFeira}
-                      </span>
-                    )}
+              return (
+                <div
+                  key={item.id}
+                  onClick={() => setSelectedPhoto(item)}
+                  className="group relative flex flex-col overflow-hidden rounded-2xl border border-slate-800/80 bg-slate-900/90 shadow-xl hover:border-amber-500/50 hover:shadow-amber-500/10 transition cursor-pointer"
+                >
+                  <div className="relative aspect-4/5 w-full overflow-hidden bg-slate-950">
+                    <img
+                      src={item.fotoUrl}
+                      alt={item.autorNome}
+                      className="h-full w-full object-cover group-hover:scale-103 transition duration-500"
+                      loading="lazy"
+                    />
 
-                    {item.destaque && (
-                      <span className="rounded-full bg-amber-500 px-2 py-0.5 text-[10px] font-bold text-slate-950 shadow-md">
-                        ⭐ Destaque
-                      </span>
-                    )}
-                  </div>
-
-                  <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition flex items-end p-3 pointer-events-none">
-                    <span className="text-[11px] font-semibold text-white flex items-center gap-1">
-                      <Maximize2 className="h-3.5 w-3.5" /> Ampliar foto
-                    </span>
-                  </div>
-                </div>
-
-                <div className="p-4 flex-1 flex flex-col justify-between space-y-3">
-                  <div className="space-y-1.5">
-                    <div className="flex items-center justify-between gap-2">
-                      <h4 className="font-serif text-sm font-bold text-white truncate group-hover:text-amber-400 transition">
-                        {item.autorNome}
-                      </h4>
-                      <span className="text-[10px] font-semibold text-slate-400 bg-slate-800 px-2 py-0.5 rounded-full shrink-0">
-                        {item.turmaOuRelacao}
-                      </span>
-                    </div>
-
-                    <p className="text-xs text-slate-300 line-clamp-3 leading-relaxed">
-                      "{item.mensagem}"
-                    </p>
-                  </div>
-
-                  <div className="pt-2 border-t border-slate-800/80 flex items-center justify-between text-xs">
-                    <span className="text-[10px] font-mono text-slate-500 flex items-center gap-1">
-                      <Clock className="h-3 w-3" /> {formatData(item.dataCriacao)}
-                    </span>
-
-                    <div className="flex items-center gap-2">
-                      {session && (
-                        <button
-                          onClick={(e) => handleDelete(item.id, e)}
-                          title="Remover foto (Admin)"
-                          className="flex h-7 w-7 items-center justify-center rounded-lg border border-rose-500/30 bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 transition"
+                    {/* Top badges on photo */}
+                    <div className="absolute top-3 left-3 right-3 flex items-center justify-between pointer-events-none">
+                      {cenario ? (
+                        <span
+                          className="rounded-full px-2.5 py-0.5 text-[10px] font-bold text-white shadow-md backdrop-blur-md border border-white/20"
+                          style={{ backgroundColor: cenario.corHex }}
                         >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </button>
-                      )}
+                          {cenario.icone} {cenario.tag}
+                        </span>
+                      ) : item.localFeira ? (
+                        <span className="rounded-full bg-slate-950/80 backdrop-blur-md px-2.5 py-0.5 text-[10px] font-bold text-amber-300 border border-amber-500/30">
+                          📍 {item.localFeira}
+                        </span>
+                      ) : null}
 
-                      <button
-                        onClick={(e) => handleLike(item.id, e)}
-                        title="Curtir foto"
-                        className="flex items-center gap-1.5 rounded-xl border border-rose-500/30 bg-rose-500/10 px-2.5 py-1 text-xs font-bold text-rose-400 hover:bg-rose-500/20 transition active:scale-95"
-                      >
-                        <Heart className="h-3.5 w-3.5 fill-rose-500" />
-                        <span>{item.curtidas || 0}</span>
-                      </button>
+                      {item.destaque && (
+                        <span className="rounded-full bg-amber-500 px-2 py-0.5 text-[10px] font-bold text-slate-950 shadow-md">
+                          ⭐ Destaque
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition flex items-end p-3 pointer-events-none">
+                      <span className="text-[11px] font-semibold text-white flex items-center gap-1">
+                        <Maximize2 className="h-3.5 w-3.5" /> Ampliar foto
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="p-4 flex-1 flex flex-col justify-between space-y-3">
+                    <div className="space-y-1.5">
+                      <div className="flex items-center justify-between gap-2">
+                        <h4 className="font-serif text-sm font-bold text-white truncate group-hover:text-amber-400 transition">
+                          {item.autorNome}
+                        </h4>
+                        <span className="text-[10px] font-semibold text-slate-400 bg-slate-800 px-2 py-0.5 rounded-full shrink-0">
+                          {item.turmaOuRelacao}
+                        </span>
+                      </div>
+
+                      <p className="text-xs text-slate-300 line-clamp-2 leading-relaxed">
+                        "{item.mensagem}"
+                      </p>
+                    </div>
+
+                    <div className="pt-2 border-t border-slate-800/80 flex items-center justify-between text-xs">
+                      <span className="text-[10px] font-mono text-slate-500 flex items-center gap-1">
+                        <Clock className="h-3 w-3" /> {formatData(item.dataCriacao)}
+                      </span>
+
+                      <div className="flex items-center gap-2">
+                        {session && (
+                          <button
+                            onClick={(e) => handleDelete(item.id, e)}
+                            title="Remover foto (Admin)"
+                            className="flex h-7 w-7 items-center justify-center rounded-lg border border-rose-500/30 bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 transition"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
+                        )}
+
+                        <button
+                          onClick={(e) => handleLike(item.id, e)}
+                          title="Curtir foto"
+                          className="flex items-center gap-1.5 rounded-xl border border-rose-500/30 bg-rose-500/10 px-2.5 py-1 text-xs font-bold text-rose-400 hover:bg-rose-500/20 transition active:scale-95"
+                        >
+                          <Heart className="h-3.5 w-3.5 fill-rose-500" />
+                          <span>{item.curtidas || 0}</span>
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </main>
@@ -695,10 +995,12 @@ export const MuralFotosPage: React.FC<MuralFotosPageProps> = ({
                 </div>
                 <div>
                   <h3 className="font-serif text-base font-bold text-white leading-tight">
-                    {previewImage ? 'Confirmar e Publicar Foto' : 'Câmera da Feira Cultural'}
+                    {previewImage ? 'Revisar Foto & Cenário' : 'Cabine Fotográfica Temática'}
                   </h3>
                   <p className="text-[11px] text-slate-400">
-                    {previewImage ? 'Revise sua foto e adicione seu nome' : 'Tire sua foto ao vivo para o mural oficial'}
+                    {previewImage
+                      ? 'Alterne o cenário e informe seu nome'
+                      : 'Escolha o cenário e dispare a foto'}
                   </p>
                 </div>
               </div>
@@ -708,6 +1010,32 @@ export const MuralFotosPage: React.FC<MuralFotosPageProps> = ({
               >
                 <X className="h-4 w-4" />
               </button>
+            </div>
+
+            {/* Scenario Chooser Selector Bar */}
+            <div className="bg-slate-950/70 border-b border-slate-800/80 px-4 py-2.5">
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-[11px] font-bold text-slate-400 flex items-center gap-1.5 shrink-0">
+                  <Layers className="h-3.5 w-3.5 text-amber-400" /> Cenário:
+                </span>
+                <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none w-full justify-end">
+                  {CENARIOS_FUNDO.map((c) => (
+                    <button
+                      key={c.id}
+                      type="button"
+                      onClick={() => handleChangeCenario(c.id)}
+                      className={`flex items-center gap-1 rounded-xl px-2.5 py-1 text-xs font-bold transition whitespace-nowrap ${
+                        selectedCenario === c.id
+                          ? 'bg-amber-500 text-slate-950 shadow-md scale-102'
+                          : 'bg-slate-900 border border-slate-800 text-slate-400 hover:text-white'
+                      }`}
+                    >
+                      <span>{c.icone}</span>
+                      <span>{c.tag}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
             </div>
 
             {/* Camera Viewfinder OR Captured Preview */}
@@ -741,6 +1069,12 @@ export const MuralFotosPage: React.FC<MuralFotosPageProps> = ({
                       </div>
                     )}
 
+                    {/* Live Badge for Selected Scenario */}
+                    <div className="absolute top-3 left-3 z-20 rounded-full bg-slate-950/80 backdrop-blur-md px-3 py-1 text-xs font-bold text-white border border-white/20 shadow-md">
+                      {CENARIOS_FUNDO.find((c) => c.id === selectedCenario)?.icone}{' '}
+                      Fundo: {CENARIOS_FUNDO.find((c) => c.id === selectedCenario)?.nome}
+                    </div>
+
                     {/* Live School Frame Watermark */}
                     <div className="absolute bottom-2 left-2 right-2 z-20 rounded-xl bg-slate-950/80 backdrop-blur-md px-3 py-1.5 text-center text-[10px] font-bold text-amber-300 border border-amber-500/30">
                       {identidade.nomeColegio} • {identidade.nomeFeira} {identidade.anoFeira || '2026'}
@@ -761,7 +1095,7 @@ export const MuralFotosPage: React.FC<MuralFotosPageProps> = ({
                           </h4>
                           <p className="text-xs text-slate-300 max-w-sm leading-relaxed">
                             {cameraError === 'BLOCKED'
-                              ? 'O navegador ou aplicativo bloqueou a transmissão direta da câmera. Use o botão abaixo para disparar com a câmera do seu aparelho sem bloqueio:'
+                              ? 'O navegador bloqueou a transmissão. Toque no botão abaixo para abrir a câmera nativa do seu aparelho e aplicar o cenário escolhido:'
                               : 'Toque abaixo para abrir a câmera nativa do seu celular ou tablet:'}
                           </p>
                         </div>
@@ -900,11 +1234,22 @@ export const MuralFotosPage: React.FC<MuralFotosPageProps> = ({
                   )}
                 </div>
               ) : (
-                /* CAPTURED PHOTO REVIEW & PUBLISH FORM */
+                /* CAPTURED PHOTO REVIEW & SCENARIO CHANGER */
                 <form onSubmit={handleSubmitPhoto} className="space-y-4 animate-fade-in">
-                  {/* Photo Preview Card */}
-                  <div className="relative aspect-4/3 w-full rounded-2xl overflow-hidden bg-black border-2 border-amber-500/50 shadow-lg">
-                    <img src={previewImage} alt="Foto Capturada" className="h-full w-full object-cover" />
+                  {/* Photo Preview Card with chosen Landmark Background */}
+                  <div className="relative aspect-4/5 w-full max-h-[55vh] rounded-2xl overflow-hidden bg-black border-2 border-amber-500/50 shadow-lg flex items-center justify-center">
+                    <img
+                      src={previewImage}
+                      alt="Foto com Cenário"
+                      className="h-full w-full object-contain"
+                    />
+
+                    {isComposing && (
+                      <div className="absolute inset-0 bg-slate-950/70 backdrop-blur-xs flex flex-col items-center justify-center text-white space-y-2">
+                        <RefreshCw className="h-6 w-6 animate-spin text-amber-400" />
+                        <span className="text-xs font-bold">Aplicando novo cenário...</span>
+                      </div>
+                    )}
 
                     {/* Retake Button Over Photo */}
                     <button
@@ -915,6 +1260,47 @@ export const MuralFotosPage: React.FC<MuralFotosPageProps> = ({
                       <RotateCcw className="h-3.5 w-3.5" />
                       <span>Tirar Outra Foto</span>
                     </button>
+                  </div>
+
+                  {/* Interactive Scenario Switcher on Review Screen */}
+                  <div className="rounded-2xl border border-slate-800 bg-slate-950 p-3 space-y-2">
+                    <div className="flex items-center justify-between text-xs font-semibold text-slate-300">
+                      <span className="flex items-center gap-1.5">
+                        <Sparkles className="h-3.5 w-3.5 text-amber-400" />
+                        Trocar Cenário de Fundo:
+                      </span>
+                      <span className="text-[11px] text-amber-400 font-bold">
+                        {CENARIOS_FUNDO.find((c) => c.id === selectedCenario)?.nome}
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-3 gap-2">
+                      {CENARIOS_FUNDO.map((c) => (
+                        <button
+                          key={c.id}
+                          type="button"
+                          onClick={() => handleChangeCenario(c.id)}
+                          className={`relative rounded-xl border p-2 text-left transition flex items-center gap-2 ${
+                            selectedCenario === c.id
+                              ? 'border-amber-400 bg-amber-500/15 shadow-sm'
+                              : 'border-slate-800 bg-slate-900/60 hover:border-slate-700'
+                          }`}
+                        >
+                          <span className="text-xl shrink-0">{c.icone}</span>
+                          <div className="min-w-0 flex-1">
+                            <span className="text-xs font-bold text-white block truncate leading-tight">
+                              {c.tag}
+                            </span>
+                            <span className="text-[10px] text-slate-400 block truncate">
+                              Toque p/ aplicar
+                            </span>
+                          </div>
+                          {selectedCenario === c.id && (
+                            <Check className="h-3.5 w-3.5 text-amber-400 shrink-0" />
+                          )}
+                        </button>
+                      ))}
+                    </div>
                   </div>
 
                   {/* Form Fields */}
@@ -954,31 +1340,13 @@ export const MuralFotosPage: React.FC<MuralFotosPageProps> = ({
 
                   <div className="space-y-1">
                     <label className="text-xs font-semibold text-slate-300">
-                      Onde você tirou a foto?
-                    </label>
-                    <select
-                      value={formLocal}
-                      onChange={(e) => setFormLocal(e.target.value)}
-                      className="w-full rounded-xl border border-slate-800 bg-slate-950 px-3.5 py-2 text-xs text-white focus:border-amber-500 focus:outline-none"
-                    >
-                      <option value="Área Geral">Área Geral da Feira</option>
-                      <option value="Estande Av. Paulista">Estande da Avenida Paulista</option>
-                      <option value="Mercadão Municipal">Estande do Mercadão Municipal</option>
-                      <option value="Bairro da Liberdade">Estande do Bairro da Liberdade</option>
-                      <option value="Praça Gastronômica">Praça Gastronômica / Lanches</option>
-                      <option value="Palco de Apresentações">Palco das Apresentações</option>
-                    </select>
-                  </div>
-
-                  <div className="space-y-1">
-                    <label className="text-xs font-semibold text-slate-300">
                       Mensagem / Legenda da Foto
                     </label>
                     <textarea
                       rows={2}
                       value={formMensagem}
                       onChange={(e) => setFormMensagem(e.target.value)}
-                      placeholder="Deixe um recado legal sobre o que você achou da feira cultural..."
+                      placeholder="Deixe um recado sobre o que você achou da feira cultural..."
                       className="w-full rounded-xl border border-slate-800 bg-slate-950 px-3.5 py-2 text-xs text-white placeholder-slate-500 focus:border-amber-500 focus:outline-none"
                     />
                   </div>
@@ -996,7 +1364,7 @@ export const MuralFotosPage: React.FC<MuralFotosPageProps> = ({
 
                     <button
                       type="submit"
-                      disabled={!formNome.trim() || isSubmitting}
+                      disabled={!formNome.trim() || isSubmitting || isComposing}
                       className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 px-6 py-2.5 text-xs font-bold text-slate-950 shadow-md shadow-amber-500/25 hover:from-amber-400 hover:to-amber-500 transition disabled:opacity-50"
                     >
                       <Send className="h-3.5 w-3.5" />
@@ -1027,11 +1395,11 @@ export const MuralFotosPage: React.FC<MuralFotosPageProps> = ({
               <X className="h-4 w-4" />
             </button>
 
-            <div className="relative max-h-[65vh] w-full overflow-hidden bg-slate-950 flex items-center justify-center">
+            <div className="relative max-h-[70vh] w-full overflow-hidden bg-slate-950 flex items-center justify-center">
               <img
                 src={selectedPhoto.fotoUrl}
                 alt={selectedPhoto.autorNome}
-                className="max-h-[65vh] w-auto max-w-full object-contain"
+                className="max-h-[70vh] w-auto max-w-full object-contain"
               />
             </div>
 
@@ -1048,8 +1416,17 @@ export const MuralFotosPage: React.FC<MuralFotosPageProps> = ({
                   </div>
 
                   <p className="text-xs text-slate-400 mt-1 flex items-center gap-2">
+                    {selectedPhoto.cenarioFundo && (
+                      <span className="text-amber-400 font-semibold">
+                        {getCenarioInfo(selectedPhoto.cenarioFundo)?.icone}{' '}
+                        Cenário: {getCenarioInfo(selectedPhoto.cenarioFundo)?.nome}
+                      </span>
+                    )}
                     {selectedPhoto.localFeira && (
-                      <span className="text-amber-400 font-semibold">📍 {selectedPhoto.localFeira}</span>
+                      <>
+                        <span>•</span>
+                        <span>📍 {selectedPhoto.localFeira}</span>
+                      </>
                     )}
                     <span>•</span>
                     <span>{formatData(selectedPhoto.dataCriacao)}</span>

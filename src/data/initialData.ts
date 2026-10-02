@@ -910,6 +910,7 @@ export const INITIAL_MURAL_FOTOS: FotoMural[] = [
     curtidas: 42,
     dataCriacao: '2026-10-01T14:20:00Z',
     localFeira: 'Estande Av. Paulista',
+    cenarioFundo: 'paulista',
     destaque: true
   },
   {
@@ -921,6 +922,7 @@ export const INITIAL_MURAL_FOTOS: FotoMural[] = [
     curtidas: 58,
     dataCriacao: '2026-10-01T14:45:00Z',
     localFeira: 'Bairro da Liberdade',
+    cenarioFundo: 'liberdade',
     destaque: true
   },
   {
@@ -931,7 +933,8 @@ export const INITIAL_MURAL_FOTOS: FotoMural[] = [
     fotoUrl: 'https://images.unsplash.com/photo-1577495508048-b635879837f1?q=80&w=800&auto=format&fit=crop',
     curtidas: 35,
     dataCriacao: '2026-10-01T15:10:00Z',
-    localFeira: 'Mercadão Municipal'
+    localFeira: 'Mercadão Municipal',
+    cenarioFundo: 'mercadao'
   },
   {
     id: 'mural_4',
@@ -942,6 +945,7 @@ export const INITIAL_MURAL_FOTOS: FotoMural[] = [
     curtidas: 73,
     dataCriacao: '2026-10-01T13:30:00Z',
     localFeira: 'Área Geral',
+    cenarioFundo: 'paulista',
     destaque: true
   },
   {
@@ -952,7 +956,8 @@ export const INITIAL_MURAL_FOTOS: FotoMural[] = [
     fotoUrl: 'https://images.unsplash.com/photo-1523240795612-9a054b0db644?q=80&w=800&auto=format&fit=crop',
     curtidas: 61,
     dataCriacao: '2026-10-01T15:35:00Z',
-    localFeira: 'Estande Av. Paulista'
+    localFeira: 'Estande Av. Paulista',
+    cenarioFundo: 'paulista'
   }
 ];
 
