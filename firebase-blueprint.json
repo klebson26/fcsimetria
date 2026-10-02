@@ -115,6 +115,14 @@
     "/midias/{midiaId}": {
       "schema": "ItemGenericoFeira",
       "description": "Galeria de mídias e fotos enviadas pelo painel"
+    },
+    "/metricas_plataforma/{docId}": {
+      "schema": "ItemGenericoFeira",
+      "description": "Métricas consolidadas de acessos das seções da feira cultural"
+    },
+    "/visitas_eventos/{eventoId}": {
+      "schema": "ItemGenericoFeira",
+      "description": "Registro de eventos de acesso e navegação em tempo real"
     }
   }
 }

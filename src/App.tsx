@@ -102,6 +102,8 @@ export default function App() {
     if (currentView === 'PAULISTA') recordSectionVisit('paulista');
     else if (currentView === 'MERCADAO') recordSectionVisit('mercadao');
     else if (currentView === 'LIBERDADE') recordSectionVisit('liberdade');
+    else if (currentView === 'QUIZ') recordSectionVisit('quiz');
+    else if (currentView === 'MURAL') recordSectionVisit('mural');
   }, [currentView]);
 
   const handleNavigateToAdmin = () => {

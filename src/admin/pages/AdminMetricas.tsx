@@ -3,7 +3,9 @@ import {
   getMetricas,
   recordSectionVisit,
   resetMetricasToDefault,
-  MetricasGerais
+  subscribeMetricas,
+  MetricasGerais,
+  EventoVisitaReal
 } from '../../services/analyticsService';
 import { D3BarChartSections } from '../components/d3/D3BarChartSections';
 import { D3DonutChartSections } from '../components/d3/D3DonutChartSections';
@@ -22,32 +24,39 @@ import {
   Eye,
   CheckCircle,
   HelpCircle,
-  Award
+  Award,
+  Radio,
+  Wifi,
+  MonitorCheck
 } from 'lucide-react';
 
 export const AdminMetricas: React.FC = () => {
   const [metricas, setMetricas] = useState<MetricasGerais>(getMetricas());
+  const [ultimosEventos, setUltimosEventos] = useState<EventoVisitaReal[]>([]);
   const [selectedMetric, setSelectedMetric] = useState<
     'totalAcessos' | 'visitantesUnicos' | 'interacoes'
   >('totalAcessos');
   const [isSimulating, setIsSimulating] = useState(false);
 
   useEffect(() => {
-    const handleStorageUpdate = () => {
-      setMetricas(getMetricas());
-    };
-    window.addEventListener('storage', handleStorageUpdate);
+    const unsubscribe = subscribeMetricas((data, events) => {
+      setMetricas(data);
+      if (events && events.length > 0) {
+        setUltimosEventos(events);
+      }
+    });
+
     return () => {
-      window.removeEventListener('storage', handleStorageUpdate);
+      unsubscribe();
     };
   }, []);
 
-  const handleSimulateVisit = (secaoId: string) => {
+  const handleSimulateVisit = async (secaoId: string) => {
     playClickSound();
     setIsSimulating(true);
-    recordSectionVisit(secaoId);
+    await recordSectionVisit(secaoId);
     setMetricas(getMetricas());
-    setTimeout(() => setIsSimulating(false), 500);
+    setTimeout(() => setIsSimulating(false), 400);
   };
 
   const handleResetData = () => {
@@ -65,18 +74,29 @@ export const AdminMetricas: React.FC = () => {
 
   return (
     <div className="space-y-8 p-4 sm:p-8 animate-fade-in text-slate-100">
-      {/* Page Header */}
+      {/* Page Header with Live Firestore Indicator */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800 pb-6">
         <div className="space-y-1">
-          <div className="inline-flex items-center gap-2 rounded-full border border-amber-500/30 bg-amber-500/10 px-3 py-0.5 text-xs font-bold uppercase tracking-wider text-amber-400">
-            <BarChart3 className="h-3.5 w-3.5" />
-            <span>Métricas D3.js em Tempo Real</span>
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="inline-flex items-center gap-2 rounded-full border border-amber-500/30 bg-amber-500/10 px-3 py-0.5 text-xs font-bold uppercase tracking-wider text-amber-400">
+              <BarChart3 className="h-3.5 w-3.5" />
+              <span>Métricas D3.js</span>
+            </div>
+
+            <div className="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-0.5 text-[11px] font-bold text-emerald-400">
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+              </span>
+              <span>Monitoramento Real Cloud Firestore Ativo</span>
+            </div>
           </div>
+
           <h1 className="font-serif text-2xl sm:text-3xl font-bold text-white tracking-tight">
-            Estatísticas & Acessos da Plataforma
+            Estatísticas & Acessos Reais da Plataforma
           </h1>
           <p className="text-xs sm:text-sm text-slate-400 max-w-2xl">
-            Gráficos interativos em D3 monitorando quais seções temáticas (Avenida Paulista, Mercadão e Bairro da Liberdade) foram mais visitadas pelo público da feira.
+            Dados capturados em tempo real de cada visitante que acessa o portal nos estandes da feira. Visualização analítica em D3 comparando <strong>Avenida Paulista</strong>, <strong>Mercadão Municipal</strong> e <strong>Bairro da Liberdade</strong>.
           </p>
         </div>
 
@@ -117,7 +137,7 @@ export const AdminMetricas: React.FC = () => {
               {metricas.totalVisitas.toLocaleString('pt-BR')}
             </span>
             <span className="text-xs font-bold text-emerald-400 flex items-center">
-              <ArrowUpRight className="h-3.5 w-3.5" /> +18.4%
+              <ArrowUpRight className="h-3.5 w-3.5" /> Real Cloud
             </span>
           </div>
           <p className="text-[11px] text-slate-400">Páginas visualizadas em toda a feira</p>
@@ -136,7 +156,7 @@ export const AdminMetricas: React.FC = () => {
             </span>
             <span className="text-xs font-bold text-amber-400">Hoje</span>
           </div>
-          <p className="text-[11px] text-slate-400">Dispositivos conectados na feira cultural</p>
+          <p className="text-[11px] text-slate-400">Dispositivos reais conectados na feira cultural</p>
         </div>
 
         <div className="rounded-2xl border border-slate-800 bg-slate-900/90 p-5 shadow-xl space-y-2">
@@ -285,13 +305,80 @@ export const AdminMetricas: React.FC = () => {
                   className="h-2.5 w-2.5 rounded-full"
                   style={{ backgroundColor: s.corHex }}
                 />
-                <span className="text-slate-300">{s.tag || s.nome}</span>
+                <span className="text-slate-300">{s.nome}</span>
               </div>
             ))}
           </div>
         </div>
 
         <D3TimelineChartSections data={metricas.secoes} />
+      </div>
+
+      {/* Real-time Live Visitors Event Feed (From Cloud Firestore) */}
+      <div className="rounded-3xl border border-slate-800 bg-slate-900/90 p-6 shadow-xl space-y-4">
+        <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+          <div className="flex items-center gap-2">
+            <span className="relative flex h-3 w-3">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
+            </span>
+            <h4 className="font-serif text-base font-bold text-white flex items-center gap-2">
+              Feed de Acessos Recentes em Tempo Real
+            </h4>
+          </div>
+
+          <div className="flex items-center gap-2 text-xs font-mono text-emerald-400">
+            <Radio className="h-3.5 w-3.5 animate-pulse" />
+            <span className="hidden sm:inline">Sincronizado via Firestore Cloud</span>
+          </div>
+        </div>
+
+        {ultimosEventos.length === 0 ? (
+          <div className="rounded-2xl border border-slate-800 bg-slate-950 p-6 text-center space-y-2">
+            <p className="text-xs text-slate-400">
+              Os eventos de acesso dos visitantes aparecem aqui em tempo real à medida que as páginas são abertas.
+            </p>
+            <p className="text-[11px] text-amber-400">
+              Dica: Abra uma das páginas da feira (Paulista, Mercadão, Liberdade) em outra aba ou celular para ver o registro instantâneo!
+            </p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+            {ultimosEventos.slice(0, 9).map((evento, idx) => (
+              <div
+                key={evento.id || idx}
+                className="flex items-center justify-between p-3.5 rounded-2xl bg-slate-950 border border-slate-800/80 hover:border-slate-700 transition text-xs shadow-sm"
+              >
+                <div className="flex items-center gap-3 min-w-0">
+                  <span className="text-2xl shrink-0 p-1.5 rounded-xl bg-slate-900 border border-slate-800">
+                    {evento.icone}
+                  </span>
+                  <div className="min-w-0">
+                    <span className="font-bold text-white block truncate">
+                      {evento.secaoNome}
+                    </span>
+                    <span className="text-[10px] text-slate-400 flex items-center gap-1 truncate">
+                      {evento.dispositivo} · {evento.navegador}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="text-right shrink-0 ml-2">
+                  <span className="font-mono text-[10px] text-amber-400 block font-bold">
+                    {new Date(evento.timestamp).toLocaleTimeString('pt-BR', {
+                      hour: '2-digit',
+                      minute: '2-digit',
+                      second: '2-digit'
+                    })}
+                  </span>
+                  <span className="text-[9px] text-slate-500 font-mono">
+                    {evento.resolucao}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Deep-Dive Section Cards (Paulista, Mercadão, Liberdade) */}
@@ -423,7 +510,7 @@ export const AdminMetricas: React.FC = () => {
       <div className="rounded-3xl border border-slate-800 bg-slate-900/90 p-6 shadow-xl space-y-4">
         <h4 className="font-serif text-base font-bold text-white flex items-center gap-2">
           <Smartphone className="h-4 w-4 text-blue-400" />
-          Dispositivos Utilizados pelos Visitantes
+          Dispositivos Utilizados pelos Visitantes (Detecção Real)
         </h4>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           {metricas.dispositivos.map((d, i) => (
