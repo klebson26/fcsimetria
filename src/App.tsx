@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { initStorage, getAuthSession, subscribeStorage, getAparencia } from './services/storageService';
+import { recordSectionVisit } from './services/analyticsService';
 
 // Public Components
 import { Header } from './components/Header';
@@ -22,6 +23,7 @@ import { AdminSidebar } from './admin/components/AdminSidebar';
 import { AdminHeader } from './admin/components/AdminHeader';
 import { AdminLogin } from './admin/pages/AdminLogin';
 import { AdminDashboard } from './admin/pages/AdminDashboard';
+import { AdminMetricas } from './admin/pages/AdminMetricas';
 import { AdminSecoes } from './admin/pages/AdminSecoes';
 import { AdminHome } from './admin/pages/AdminHome';
 import { AdminMapa } from './admin/pages/AdminMapa';
@@ -95,6 +97,13 @@ export default function App() {
     return () => window.removeEventListener('hashchange', handleHashChange);
   }, []);
 
+  // Track section visits in analytics
+  useEffect(() => {
+    if (currentView === 'PAULISTA') recordSectionVisit('paulista');
+    else if (currentView === 'MERCADAO') recordSectionVisit('mercadao');
+    else if (currentView === 'LIBERDADE') recordSectionVisit('liberdade');
+  }, [currentView]);
+
   const handleNavigateToAdmin = () => {
     window.location.hash = 'admin';
     setCurrentView('ADMIN');
@@ -142,6 +151,7 @@ export default function App() {
           <main className="flex-1 overflow-y-auto">
             <div key={adminTab} className="animate-fade-in">
               {adminTab === 'dashboard' && <AdminDashboard onNavigateToTab={(tab) => setAdminTab(tab)} />}
+              {adminTab === 'metricas' && <AdminMetricas />}
               {adminTab === 'secoes' && <AdminSecoes />}
               {adminTab === 'home' && <AdminHome />}
               {adminTab === 'mapa' && <AdminMapa />}

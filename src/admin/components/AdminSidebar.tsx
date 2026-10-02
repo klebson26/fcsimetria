@@ -1,6 +1,7 @@
 import React from 'react';
 import {
   LayoutDashboard,
+  BarChart3,
   Layers,
   Home,
   Map,
@@ -47,6 +48,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
       title: 'GERAL',
       items: [
         { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
+        { id: 'metricas', label: 'Estatísticas & Acessos', icon: BarChart3 },
         { id: 'secoes', label: 'Seções do Site', icon: Layers },
         { id: 'home', label: 'Página Inicial (Home)', icon: Home },
         { id: 'mapa', label: 'Mapa de São Paulo', icon: Map }

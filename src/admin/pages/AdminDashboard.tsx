@@ -13,6 +13,7 @@ import {
 } from '../../services/storageService';
 import {
   Building2,
+  BarChart3,
   Camera,
   Utensils,
   Palette,
@@ -128,6 +129,30 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigateToTab 
             <p className="text-xs font-semibold uppercase tracking-wider">Imagens Cadastradas</p>
           </div>
         </div>
+      </div>
+
+      {/* D3 Analytics Highlight Card */}
+      <div className="rounded-3xl border border-amber-500/40 bg-gradient-to-r from-amber-500/10 via-slate-900 to-rose-500/10 p-6 shadow-xl flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+        <div className="space-y-1.5 max-w-xl">
+          <div className="inline-flex items-center gap-2 rounded-full border border-amber-500/30 bg-amber-500/10 px-3 py-0.5 text-[11px] font-bold uppercase tracking-wider text-amber-400">
+            <BarChart3 className="h-3.5 w-3.5" />
+            <span>Novo: Gráficos de Acessos com D3.js</span>
+          </div>
+          <h3 className="font-serif text-xl font-bold text-white">
+            Monitore quais seções foram mais visitadas na Feira Cultural
+          </h3>
+          <p className="text-xs text-slate-300 leading-relaxed">
+            Gráficos dinâmicos em D3 comparando visualizações da <strong>Avenida Paulista</strong>, <strong>Mercadão Municipal</strong> e <strong>Bairro da Liberdade</strong> com fluxo por horário e taxas de engajamento.
+          </p>
+        </div>
+
+        <button
+          onClick={() => onNavigateToTab('metricas')}
+          className="shrink-0 flex items-center gap-2 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 px-5 py-2.5 text-xs font-bold text-slate-950 hover:from-amber-400 hover:to-amber-500 transition shadow-lg shadow-amber-500/20 active:scale-95"
+        >
+          <BarChart3 className="h-4 w-4 fill-slate-950" />
+          <span>Ver Gráficos D3 Detalhados →</span>
+        </button>
       </div>
 
       {/* Shortcuts */}

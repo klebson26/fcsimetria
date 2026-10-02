@@ -349,7 +349,9 @@ export const MuralFotosPage: React.FC<MuralFotosPageProps> = ({
     setCameraError(null);
     try {
       if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-        throw new Error('NO_GET_USER_MEDIA');
+        setCameraError('NOT_FOUND');
+        setIsCameraActive(false);
+        return;
       }
 
       const stream = await navigator.mediaDevices.getUserMedia({
@@ -364,11 +366,10 @@ export const MuralFotosPage: React.FC<MuralFotosPageProps> = ({
       streamRef.current = stream;
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
-        videoRef.current.play().catch((e) => console.log('Video play deferred:', e));
+        videoRef.current.play().catch(() => {});
       }
       setIsCameraActive(true);
     } catch (err: any) {
-      console.warn('Tentando fallback simplificado de câmera:', err);
       try {
         const fallbackStream = await navigator.mediaDevices.getUserMedia({
           video: true,
@@ -377,15 +378,24 @@ export const MuralFotosPage: React.FC<MuralFotosPageProps> = ({
         streamRef.current = fallbackStream;
         if (videoRef.current) {
           videoRef.current.srcObject = fallbackStream;
-          videoRef.current.play().catch((e) => console.log('Fallback video play:', e));
+          videoRef.current.play().catch(() => {});
         }
         setIsCameraActive(true);
       } catch (fallbackErr: any) {
-        console.error('Falha de inicialização da câmera:', fallbackErr);
-        const errName = fallbackErr.name || err.name;
-        if (errName === 'NotAllowedError' || errName === 'PermissionDeniedError') {
+        const errName = fallbackErr?.name || err?.name || '';
+        const errMsg = String(fallbackErr?.message || err?.message || '');
+        if (
+          errName === 'NotAllowedError' ||
+          errName === 'PermissionDeniedError' ||
+          errMsg.toLowerCase().includes('permission') ||
+          errMsg.toLowerCase().includes('denied')
+        ) {
           setCameraError('BLOCKED');
-        } else if (errName === 'NotFoundError' || errName === 'DevicesNotFoundError') {
+        } else if (
+          errName === 'NotFoundError' ||
+          errName === 'DevicesNotFoundError' ||
+          errMsg.toLowerCase().includes('not found')
+        ) {
           setCameraError('NOT_FOUND');
         } else {
           setCameraError('GENERIC');

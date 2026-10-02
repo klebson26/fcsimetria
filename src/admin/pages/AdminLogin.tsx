@@ -1,14 +1,14 @@
 import React, { useState } from 'react';
 import { getAdmins, setAuthSession, getIdentidade } from '../../services/storageService';
-import { ShieldCheck, Lock, Mail, Key, Sparkles, AlertCircle } from 'lucide-react';
+import { Lock, Mail, Key, AlertCircle, ArrowLeft } from 'lucide-react';
 
 interface AdminLoginProps {
   onSuccess: () => void;
 }
 
 export const AdminLogin: React.FC<AdminLoginProps> = ({ onSuccess }) => {
-  const [email, setEmail] = useState('admin@simetria.edu.br');
-  const [password, setPassword] = useState('simetria123');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
   const [showRecoveryModal, setShowRecoveryModal] = useState(false);
   const [recoveryEmail, setRecoveryEmail] = useState('');
@@ -24,7 +24,7 @@ export const AdminLogin: React.FC<AdminLoginProps> = ({ onSuccess }) => {
     const user = admins.find((a) => a.email.toLowerCase() === email.trim().toLowerCase());
 
     if (!user) {
-      setErrorMsg('Usuário não encontrado. Verifique o e-mail digitado.');
+      setErrorMsg('Credenciais incorretas ou usuário não cadastrado.');
       return;
     }
 
@@ -33,7 +33,11 @@ export const AdminLogin: React.FC<AdminLoginProps> = ({ onSuccess }) => {
       return;
     }
 
-    // Standard demo password verification or any password for demo ease
+    if (!password.trim()) {
+      setErrorMsg('Por favor, digite sua senha.');
+      return;
+    }
+
     setAuthSession({
       ...user,
       ultimoAcesso: new Date().toISOString()
@@ -46,10 +50,15 @@ export const AdminLogin: React.FC<AdminLoginProps> = ({ onSuccess }) => {
     setRecoverySuccess(true);
   };
 
+  const handleBackToPublic = () => {
+    window.location.hash = '';
+    window.location.reload();
+  };
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-slate-950 p-4 relative overflow-hidden">
       {/* Background Graphic Accents */}
-      <div className="absolute inset-0 z-0">
+      <div className="absolute inset-0 z-0 pointer-events-none">
         <div className="absolute top-1/4 left-1/4 h-96 w-96 rounded-full bg-amber-500/10 blur-3xl" />
         <div className="absolute bottom-1/4 right-1/4 h-96 w-96 rounded-full bg-blue-500/10 blur-3xl" />
       </div>
@@ -68,10 +77,10 @@ export const AdminLogin: React.FC<AdminLoginProps> = ({ onSuccess }) => {
             />
           </div>
           <h1 className="font-serif text-2xl font-bold text-white uppercase tracking-wider">
-            PAINEL ADMINISTRATIVO
+            Painel Administrativo
           </h1>
           <p className="text-xs font-semibold text-amber-400 uppercase tracking-widest">
-            {identidade.nomeColegio} · {identidade.nomeFeira}
+            {identidade.nomeColegio} · Feira Cultural {identidade.anoFeira || '2026'}
           </p>
         </div>
 
@@ -86,22 +95,23 @@ export const AdminLogin: React.FC<AdminLoginProps> = ({ onSuccess }) => {
 
           <form onSubmit={handleLogin} className="space-y-4">
             <div className="space-y-1">
-              <label className="text-xs font-semibold text-slate-300">E-mail</label>
+              <label className="text-xs font-semibold text-slate-300">E-mail Institucional</label>
               <div className="relative">
                 <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
                 <input
                   type="email"
                   required
+                  autoFocus
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="admin@simetria.edu.br"
+                  placeholder="seu-email@simetria.edu.br"
                   className="w-full rounded-xl border border-slate-800 bg-slate-950 pl-9 pr-3 py-2.5 text-xs text-white placeholder-slate-500 focus:border-amber-500 focus:outline-none"
                 />
               </div>
             </div>
 
             <div className="space-y-1">
-              <label className="text-xs font-semibold text-slate-300">Senha</label>
+              <label className="text-xs font-semibold text-slate-300">Senha de Acesso</label>
               <div className="relative">
                 <Key className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
                 <input
@@ -116,7 +126,10 @@ export const AdminLogin: React.FC<AdminLoginProps> = ({ onSuccess }) => {
             </div>
 
             <div className="flex items-center justify-between text-xs pt-1">
-              <span className="text-slate-500">Credencial padrão ativa</span>
+              <span className="text-slate-500 flex items-center gap-1">
+                <Lock className="h-3 w-3 text-slate-400" />
+                <span>Acesso Seguro Restrito</span>
+              </span>
               <button
                 type="button"
                 onClick={() => setShowRecoveryModal(true)}
@@ -134,13 +147,16 @@ export const AdminLogin: React.FC<AdminLoginProps> = ({ onSuccess }) => {
             </button>
           </form>
 
-          {/* Quick Demo Credentials Help */}
-          <div className="rounded-xl bg-slate-950 p-3 border border-slate-800 text-[11px] text-slate-400 space-y-1">
-            <div className="flex items-center gap-1 font-bold text-amber-400">
-              <Sparkles className="h-3.5 w-3.5" /> Credenciais de Demonstração:
-            </div>
-            <p><strong>Super Admin:</strong> admin@simetria.edu.br / simetria123</p>
-            <p><strong>Editor:</strong> editor@simetria.edu.br / simetria123</p>
+          {/* Return to public fair website button */}
+          <div className="pt-2 text-center border-t border-slate-800/80">
+            <button
+              type="button"
+              onClick={handleBackToPublic}
+              className="inline-flex items-center gap-2 text-xs font-medium text-slate-400 hover:text-white transition"
+            >
+              <ArrowLeft className="h-3.5 w-3.5 text-amber-400" />
+              <span>Voltar ao Portal Público da Feira</span>
+            </button>
           </div>
         </div>
       </div>
