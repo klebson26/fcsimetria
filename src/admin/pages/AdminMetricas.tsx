@@ -394,7 +394,7 @@ export const AdminMetricas: React.FC = () => {
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {metricas.secoes.map((secao, idx) => {
-            const pct = Math.round((secao.totalAcessos / totalAcessosTop3) * 100);
+            const pct = totalAcessosTop3 > 0 ? Math.round((secao.totalAcessos / totalAcessosTop3) * 100) : 0;
 
             return (
               <div

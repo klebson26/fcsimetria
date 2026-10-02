@@ -31,6 +31,16 @@ export const D3DonutChartSections: React.FC<D3DonutChartSectionsProps> = ({ data
       .append('g')
       .attr('transform', `translate(${width / 2},${height / 2})`);
 
+    if (totalAcessos === 0) {
+      g.append('circle')
+        .attr('r', radius - 14)
+        .attr('fill', 'none')
+        .attr('stroke', '#334155')
+        .attr('stroke-width', 2)
+        .attr('stroke-dasharray', '4 4');
+      return;
+    }
+
     // D3 Pie Generator
     const pie = d3
       .pie<SecaoAcessoMetrica>()
@@ -107,7 +117,7 @@ export const D3DonutChartSections: React.FC<D3DonutChartSectionsProps> = ({ data
                 {hoveredSection.nome}
               </span>
               <span className="font-mono text-base font-black text-amber-400">
-                {Math.round((hoveredSection.totalAcessos / totalAcessos) * 100)}%
+                {totalAcessos > 0 ? Math.round((hoveredSection.totalAcessos / totalAcessos) * 100) : 0}%
               </span>
               <span className="text-[9px] text-slate-400 font-mono block">
                 {hoveredSection.totalAcessos.toLocaleString('pt-BR')} acessos
@@ -132,7 +142,7 @@ export const D3DonutChartSections: React.FC<D3DonutChartSectionsProps> = ({ data
       {/* Legend */}
       <div className="flex flex-wrap justify-center gap-3 pt-2">
         {data.map((item) => {
-          const pct = Math.round((item.totalAcessos / totalAcessos) * 100);
+          const pct = totalAcessos > 0 ? Math.round((item.totalAcessos / totalAcessos) * 100) : 0;
           return (
             <div
               key={item.id}
