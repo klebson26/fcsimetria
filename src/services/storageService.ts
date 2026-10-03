@@ -131,8 +131,7 @@ const KEY_TO_FIRESTORE_DOC: Record<string, string> = {
   [KEYS.APARENCIA]: 'aparencia',
   [KEYS.IDENTIDADE]: 'identidade',
   [KEYS.MODO_FEIRA]: 'modo_feira',
-  [KEYS.MEDIA]: 'media',
-  [KEYS.MURAL]: 'mural_fotos'
+  [KEYS.MEDIA]: 'media'
 };
 
 function setItem<T>(key: string, value: T) {
@@ -570,43 +569,12 @@ export function getAllTrashItems(): { id: string; titulo: string; tipo: string; 
 // ==========================================
 // MURAL DE FOTOS DOS VISITANTES DA FEIRA
 // ==========================================
-export function getMuralFotos(): FotoMural[] {
-  return getItem<FotoMural[]>(KEYS.MURAL, INITIAL_MURAL_FOTOS);
-}
-
-export function addFotoMural(foto: Omit<FotoMural, 'id' | 'curtidas' | 'dataCriacao'>): FotoMural {
-  const fotos = getMuralFotos();
-  const novaFoto: FotoMural = {
-    ...foto,
-    id: 'mural_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7),
-    curtidas: 0,
-    dataCriacao: new Date().toISOString()
-  };
-  const atualizadas = [novaFoto, ...fotos];
-  setItem(KEYS.MURAL, atualizadas);
-  logAuditAction('Nova foto publicada no Mural da Feira', foto.autorNome, 'Mural');
-  return novaFoto;
-}
-
-export function likeFotoMural(id: string): number {
-  const fotos = getMuralFotos();
-  let curtidasNovas = 0;
-  const atualizadas = fotos.map((f) => {
-    if (f.id === id) {
-      curtidasNovas = (f.curtidas || 0) + 1;
-      return { ...f, curtidas: curtidasNovas };
-    }
-    return f;
-  });
-  setItem(KEYS.MURAL, atualizadas);
-  return curtidasNovas;
-}
-
-export function deleteFotoMural(id: string): void {
-  const fotos = getMuralFotos();
-  const atualizadas = fotos.filter((f) => f.id !== id);
-  setItem(KEYS.MURAL, atualizadas);
-  logAuditAction('Foto removida do Mural da Feira', id, 'Mural');
-}
+export {
+  getMuralFotos,
+  addFotoMural,
+  likeFotoMural,
+  deleteFotoMural,
+  subscribeMuralFotos
+} from './muralService';
 
 export { KEYS };

@@ -4,6 +4,7 @@ import {
   addFotoMural,
   likeFotoMural,
   deleteFotoMural,
+  subscribeMuralFotos,
   getIdentidade,
   subscribeStorage,
   getAuthSession
@@ -130,10 +131,16 @@ export const MuralFotosPage: React.FC<MuralFotosPageProps> = ({
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
-    return subscribeStorage(() => {
-      setFotos(getMuralFotos());
+    const unsubscribeMural = subscribeMuralFotos((latestFotos) => {
+      setFotos(latestFotos);
+    });
+    const unsubscribeStorage = subscribeStorage(() => {
       setIdentidade(getIdentidade());
     });
+    return () => {
+      unsubscribeMural();
+      unsubscribeStorage();
+    };
   }, []);
 
   useEffect(() => {
@@ -165,10 +172,10 @@ export const MuralFotosPage: React.FC<MuralFotosPageProps> = ({
         bgImg.crossOrigin = 'anonymous';
 
         bgImg.onload = () => {
-          // Output Canvas: 1080 x 1350 (4:5 vertical photo booth portrait)
+          // Output Canvas: 800 x 1000 (4:5 high-res vertical photo booth portrait)
           const canvas = document.createElement('canvas');
-          canvas.width = 1080;
-          canvas.height = 1350;
+          canvas.width = 800;
+          canvas.height = 1000;
           const ctx = canvas.getContext('2d');
           if (!ctx) {
             resolve(rawPhotoDataUrl);
@@ -204,21 +211,21 @@ export const MuralFotosPage: React.FC<MuralFotosPageProps> = ({
           // 3. Header Landmark Badge (Top center)
           ctx.save();
           ctx.shadowColor = 'rgba(0, 0, 0, 0.7)';
-          ctx.shadowBlur = 16;
+          ctx.shadowBlur = 14;
           ctx.fillStyle = 'rgba(15, 23, 42, 0.88)';
           ctx.beginPath();
-          const headerW = 740;
-          const headerH = 68;
+          const headerW = 560;
+          const headerH = 52;
           const headerX = (canvas.width - headerW) / 2;
-          const headerY = 44;
-          ctx.roundRect(headerX, headerY, headerW, headerH, 34);
+          const headerY = 30;
+          ctx.roundRect(headerX, headerY, headerW, headerH, 26);
           ctx.fill();
           ctx.strokeStyle = cenario.corHex;
-          ctx.lineWidth = 3.5;
+          ctx.lineWidth = 3;
           ctx.stroke();
 
           ctx.fillStyle = '#ffffff';
-          ctx.font = 'bold 24px sans-serif';
+          ctx.font = 'bold 18px sans-serif';
           ctx.textAlign = 'center';
           ctx.textBaseline = 'middle';
           ctx.fillText(
@@ -229,31 +236,31 @@ export const MuralFotosPage: React.FC<MuralFotosPageProps> = ({
           ctx.restore();
 
           // 4. Polaroid / Photo Frame for Visitor Image
-          const cardMarginX = 60;
-          const cardY = 142;
-          const cardW = canvas.width - cardMarginX * 2; // 960px
-          const cardH = 1045;
+          const cardMarginX = 45;
+          const cardY = 104;
+          const cardW = canvas.width - cardMarginX * 2; // 710px
+          const cardH = 780;
 
           ctx.save();
           ctx.shadowColor = 'rgba(0, 0, 0, 0.75)';
-          ctx.shadowBlur = 38;
-          ctx.shadowOffsetY = 16;
+          ctx.shadowBlur = 32;
+          ctx.shadowOffsetY = 14;
           ctx.fillStyle = '#ffffff';
           ctx.beginPath();
-          ctx.roundRect(cardMarginX, cardY, cardW, cardH, 28);
+          ctx.roundRect(cardMarginX, cardY, cardW, cardH, 22);
           ctx.fill();
           ctx.restore();
 
           // 5. Draw visitor photo inside frame
-          const photoPadding = 16;
+          const photoPadding = 12;
           const photoX = cardMarginX + photoPadding;
           const photoY = cardY + photoPadding;
           const photoW = cardW - photoPadding * 2;
-          const photoH = cardH - 126;
+          const photoH = cardH - 96;
 
           ctx.save();
           ctx.beginPath();
-          ctx.roundRect(photoX, photoY, photoW, photoH, 20);
+          ctx.roundRect(photoX, photoY, photoW, photoH, 16);
           ctx.clip();
 
           // Cover fit visitor photo inside inner rect
@@ -276,25 +283,25 @@ export const MuralFotosPage: React.FC<MuralFotosPageProps> = ({
 
           // 6. Polaroid Bottom Caption & Landmark details
           ctx.fillStyle = '#0f172a';
-          ctx.font = 'italic bold 28px serif';
+          ctx.font = 'italic bold 22px serif';
           ctx.textAlign = 'left';
           ctx.textBaseline = 'middle';
-          ctx.fillText(cenario.nome, photoX + 16, cardY + cardH - 62);
+          ctx.fillText(cenario.nome, photoX + 12, cardY + cardH - 48);
 
           ctx.fillStyle = '#64748b';
-          ctx.font = 'bold 16px sans-serif';
-          ctx.fillText(`Feira Cultural • ${identidade.anoFeira || '2026'}`, photoX + 16, cardY + cardH - 26);
+          ctx.font = 'bold 13px sans-serif';
+          ctx.fillText(`Feira Cultural • ${identidade.anoFeira || '2026'}`, photoX + 12, cardY + cardH - 20);
 
           // "Eu Estive Aqui!" stamp badge on bottom right of polaroid
           ctx.save();
-          ctx.translate(cardMarginX + cardW - 148, cardY + cardH - 54);
+          ctx.translate(cardMarginX + cardW - 110, cardY + cardH - 42);
           ctx.rotate(-0.05);
           ctx.fillStyle = cenario.corHex;
           ctx.beginPath();
-          ctx.roundRect(-74, -22, 148, 44, 22);
+          ctx.roundRect(-55, -16, 110, 32, 16);
           ctx.fill();
           ctx.fillStyle = '#ffffff';
-          ctx.font = 'bold 13px sans-serif';
+          ctx.font = 'bold 10px sans-serif';
           ctx.textAlign = 'center';
           ctx.textBaseline = 'middle';
           ctx.fillText('★ ESTIVE AQUI ★', 0, 0);
@@ -302,19 +309,19 @@ export const MuralFotosPage: React.FC<MuralFotosPageProps> = ({
 
           // 7. Footer Official Fair Banner
           ctx.fillStyle = 'rgba(2, 6, 23, 0.95)';
-          ctx.fillRect(0, canvas.height - 76, canvas.width, 76);
+          ctx.fillRect(0, canvas.height - 58, canvas.width, 58);
 
           ctx.fillStyle = '#f59e0b';
-          ctx.font = 'bold 21px sans-serif';
+          ctx.font = 'bold 16px sans-serif';
           ctx.textAlign = 'center';
           ctx.textBaseline = 'middle';
           ctx.fillText(
             `${identidade.nomeColegio.toUpperCase()} • ${identidade.nomeFeira.toUpperCase()} ${identidade.anoFeira || '2026'}`,
             canvas.width / 2,
-            canvas.height - 38
+            canvas.height - 29
           );
 
-          resolve(canvas.toDataURL('image/jpeg', 0.88));
+          resolve(canvas.toDataURL('image/jpeg', 0.80));
         };
 
         bgImg.onerror = () => {
@@ -554,13 +561,13 @@ export const MuralFotosPage: React.FC<MuralFotosPageProps> = ({
     setIsCameraModalOpen(false);
   };
 
-  const handleSubmitPhoto = (e: React.FormEvent) => {
+  const handleSubmitPhoto = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formNome.trim() || !previewImage) return;
 
     setIsSubmitting(true);
     try {
-      addFotoMural({
+      await addFotoMural({
         autorNome: formNome.trim(),
         turmaOuRelacao: formRelacao,
         localFeira: formLocal,
@@ -585,15 +592,15 @@ export const MuralFotosPage: React.FC<MuralFotosPageProps> = ({
     }
   };
 
-  const handleLike = (id: string, e: React.MouseEvent) => {
+  const handleLike = async (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    likeFotoMural(id);
+    await likeFotoMural(id);
   };
 
-  const handleDelete = (id: string, e: React.MouseEvent) => {
+  const handleDelete = async (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
     if (confirm('Deseja realmente remover esta foto do mural?')) {
-      deleteFotoMural(id);
+      await deleteFotoMural(id);
       if (selectedPhoto?.id === id) {
         setSelectedPhoto(null);
       }

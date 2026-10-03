@@ -123,6 +123,10 @@
     "/visitas_eventos/{eventoId}": {
       "schema": "ItemGenericoFeira",
       "description": "Registro de eventos de acesso e navegação em tempo real"
+    },
+    "/mural_fotos/{fotoId}": {
+      "schema": "ItemGenericoFeira",
+      "description": "Fotos publicadas pelos visitantes e alunos no Mural da Feira Cultural"
     }
   }
 }
