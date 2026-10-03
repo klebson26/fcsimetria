@@ -127,6 +127,10 @@
     "/mural_fotos/{fotoId}": {
       "schema": "ItemGenericoFeira",
       "description": "Fotos publicadas pelos visitantes e alunos no Mural da Feira Cultural"
+    },
+    "/mural_lixeira/{fotoId}": {
+      "schema": "ItemGenericoFeira",
+      "description": "Fotos removidas e preservadas na lixeira do mural para recuperação"
     }
   }
 }

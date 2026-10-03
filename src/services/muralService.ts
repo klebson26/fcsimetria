@@ -15,17 +15,27 @@ import {
 import { FotoMural } from '../types/database';
 import { INITIAL_MURAL_FOTOS } from '../data/initialData';
 
-const IDB_NAME = 'simetria_mural_db';
-const IDB_STORE = 'mural_fotos_store';
-const IDB_VERSION = 1;
-const STORAGE_KEY_MURAL_FALLBACK = 'simetria_mural_cache_v2';
+export interface FotoMuralLixeira extends FotoMural {
+  dataExclusao: string;
+}
 
-// In-memory cache for ultra-fast synchronous access
+const IDB_NAME = 'simetria_mural_db_v2';
+const IDB_STORE_FOTOS = 'mural_fotos_store';
+const IDB_STORE_LIXEIRA = 'mural_lixeira_store';
+const IDB_VERSION = 2;
+
+const STORAGE_KEY_MURAL_CACHE = 'simetria_mural_cache_v3';
+const STORAGE_KEY_LIXEIRA_CACHE = 'simetria_mural_lixeira_cache_v3';
+
+// In-memory caches for instant zero-latency UI
 let cachedFotos: FotoMural[] = [];
+let cachedLixeira: FotoMuralLixeira[] = [];
 let isInitialized = false;
-const listeners = new Set<(fotos: FotoMural[]) => void>();
 
-// Open IndexedDB database with fallback
+const fotosListeners = new Set<(fotos: FotoMural[]) => void>();
+const lixeiraListeners = new Set<(fotos: FotoMuralLixeira[]) => void>();
+
+// Open IndexedDB with 2 stores (Active photos + Recycle Bin)
 function openIndexedDB(): Promise<IDBDatabase | null> {
   return new Promise((resolve) => {
     if (typeof window === 'undefined' || !window.indexedDB) {
@@ -34,10 +44,13 @@ function openIndexedDB(): Promise<IDBDatabase | null> {
     }
     try {
       const request = window.indexedDB.open(IDB_NAME, IDB_VERSION);
-      request.onupgradeneeded = () => {
+      request.onupgradeneeded = (event) => {
         const db = request.result;
-        if (!db.objectStoreNames.contains(IDB_STORE)) {
-          db.createObjectStore(IDB_STORE, { keyPath: 'id' });
+        if (!db.objectStoreNames.contains(IDB_STORE_FOTOS)) {
+          db.createObjectStore(IDB_STORE_FOTOS, { keyPath: 'id' });
+        }
+        if (!db.objectStoreNames.contains(IDB_STORE_LIXEIRA)) {
+          db.createObjectStore(IDB_STORE_LIXEIRA, { keyPath: 'id' });
         }
       };
       request.onsuccess = () => resolve(request.result);
@@ -48,19 +61,17 @@ function openIndexedDB(): Promise<IDBDatabase | null> {
   });
 }
 
-// Save all photos to IndexedDB
-async function saveToIndexedDB(fotos: FotoMural[]): Promise<void> {
+// IndexedDB generic helpers
+async function saveStoreToIndexedDB(storeName: string, items: any[]): Promise<void> {
   const idb = await openIndexedDB();
   if (!idb) return;
 
   return new Promise((resolve) => {
     try {
-      const tx = idb.transaction(IDB_STORE, 'readwrite');
-      const store = tx.objectStore(IDB_STORE);
+      const tx = idb.transaction(storeName, 'readwrite');
+      const store = tx.objectStore(storeName);
       store.clear();
-      fotos.forEach((foto) => {
-        store.put(foto);
-      });
+      items.forEach((item) => store.put(item));
       tx.oncomplete = () => resolve();
       tx.onerror = () => resolve();
     } catch {
@@ -69,20 +80,16 @@ async function saveToIndexedDB(fotos: FotoMural[]): Promise<void> {
   });
 }
 
-// Load all photos from IndexedDB
-async function loadFromIndexedDB(): Promise<FotoMural[]> {
+async function loadStoreFromIndexedDB<T>(storeName: string): Promise<T[]> {
   const idb = await openIndexedDB();
   if (!idb) return [];
 
   return new Promise((resolve) => {
     try {
-      const tx = idb.transaction(IDB_STORE, 'readonly');
-      const store = tx.objectStore(IDB_STORE);
+      const tx = idb.transaction(storeName, 'readonly');
+      const store = tx.objectStore(storeName);
       const req = store.getAll();
-      req.onsuccess = () => {
-        const result = (req.result as FotoMural[]) || [];
-        resolve(result.sort((a, b) => new Date(b.dataCriacao).getTime() - new Date(a.dataCriacao).getTime()));
-      };
+      req.onsuccess = () => resolve((req.result as T[]) || []);
       req.onerror = () => resolve([]);
     } catch {
       resolve([]);
@@ -90,131 +97,157 @@ async function loadFromIndexedDB(): Promise<FotoMural[]> {
   });
 }
 
-// Fallback to localStorage without throwing QuotaExceededError
-function saveToLocalStorageSafe(fotos: FotoMural[]) {
-  try {
-    // Only store lightweight metadata or sample if too large
-    localStorage.setItem(STORAGE_KEY_MURAL_FALLBACK, JSON.stringify(fotos));
-  } catch (err) {
-    console.debug('LocalStorage quota reached, using IndexedDB and Firestore exclusively.');
-  }
-}
-
-function loadFromLocalStorage(): FotoMural[] {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY_MURAL_FALLBACK) || localStorage.getItem('simetria_sp_mural_fotos');
-    if (raw) {
-      return JSON.parse(raw);
-    }
-  } catch {}
-  return [];
-}
-
-// Notify subscribers of photo changes
-function notifySubscribers() {
-  listeners.forEach((listener) => {
+function notifyFotosSubscribers() {
+  fotosListeners.forEach((listener) => {
     try {
       listener([...cachedFotos]);
     } catch (err) {
-      console.warn('Erro no listener do mural:', err);
+      console.warn('Erro listener fotos:', err);
     }
   });
 }
 
-// Update cache and persist to local stores
-function updateMemoryAndLocalStores(fotos: FotoMural[]) {
-  cachedFotos = [...fotos].sort(
-    (a, b) => new Date(b.dataCriacao).getTime() - new Date(a.dataCriacao).getTime()
-  );
-  saveToIndexedDB(cachedFotos).catch(() => {});
-  saveToLocalStorageSafe(cachedFotos);
-  notifySubscribers();
+function notifyLixeiraSubscribers() {
+  lixeiraListeners.forEach((listener) => {
+    try {
+      listener([...cachedLixeira]);
+    } catch (err) {
+      console.warn('Erro listener lixeira:', err);
+    }
+  });
 }
 
-// Initialize and setup real-time cloud Firestore sync
+function saveLocalStorageSafe(key: string, data: any) {
+  try {
+    localStorage.setItem(key, JSON.stringify(data));
+  } catch {}
+}
+
+function loadLocalStorageSafe<T>(key: string, defaultValue: T): T {
+  try {
+    const raw = localStorage.getItem(key);
+    if (raw) return JSON.parse(raw);
+  } catch {}
+  return defaultValue;
+}
+
+// Initialize service and start Firestore real-time listeners
 export function initMuralService(): void {
   if (isInitialized) return;
   isInitialized = true;
 
-  // 1. Immediate synchronous load from localStorage for zero flicker
-  const localInitial = loadFromLocalStorage();
-  if (localInitial.length > 0) {
-    cachedFotos = localInitial;
+  // 1. Initial quick load from local storage
+  const localFotos = loadLocalStorageSafe<FotoMural[]>(STORAGE_KEY_MURAL_CACHE, []);
+  const localLixeira = loadLocalStorageSafe<FotoMuralLixeira[]>(STORAGE_KEY_LIXEIRA_CACHE, []);
+
+  if (localFotos.length > 0) {
+    cachedFotos = localFotos;
   } else {
     cachedFotos = [...INITIAL_MURAL_FOTOS];
   }
+  cachedLixeira = localLixeira;
 
-  // 2. Asynchronously load from IndexedDB
-  loadFromIndexedDB().then((idbFotos) => {
+  // 2. Load from IndexedDB
+  loadStoreFromIndexedDB<FotoMural>(IDB_STORE_FOTOS).then((idbFotos) => {
     if (idbFotos.length > 0) {
-      cachedFotos = idbFotos;
-      notifySubscribers();
+      cachedFotos = idbFotos.sort((a, b) => new Date(b.dataCriacao).getTime() - new Date(a.dataCriacao).getTime());
+      notifyFotosSubscribers();
     }
   });
 
-  // 3. Connect to Google Cloud Firestore with real-time onSnapshot
+  loadStoreFromIndexedDB<FotoMuralLixeira>(IDB_STORE_LIXEIRA).then((idbLixeira) => {
+    if (idbLixeira.length > 0) {
+      cachedLixeira = idbLixeira.sort((a, b) => new Date(b.dataExclusao).getTime() - new Date(a.dataExclusao).getTime());
+      notifyLixeiraSubscribers();
+    }
+  });
+
+  // 3. Connect to Firestore for active photos
   if (db) {
     try {
-      const colRef = collection(db, 'mural_fotos');
-      const q = query(colRef, orderBy('dataCriacao', 'desc'));
+      const fotosCol = collection(db, 'mural_fotos');
+      const qFotos = query(fotosCol, orderBy('dataCriacao', 'desc'));
 
       onSnapshot(
-        q,
+        qFotos,
         async (snapshot) => {
           if (!snapshot.empty) {
             const remoteFotos: FotoMural[] = [];
             snapshot.forEach((docItem) => {
               remoteFotos.push({ id: docItem.id, ...(docItem.data() as Omit<FotoMural, 'id'>) });
             });
-            updateMemoryAndLocalStores(remoteFotos);
+            cachedFotos = remoteFotos;
+            saveStoreToIndexedDB(IDB_STORE_FOTOS, cachedFotos).catch(() => {});
+            saveLocalStorageSafe(STORAGE_KEY_MURAL_CACHE, cachedFotos);
+            notifyFotosSubscribers();
           } else {
-            // First time seeding Firestore if cloud collection is empty
-            const toSeed = cachedFotos.length > 0 ? cachedFotos : INITIAL_MURAL_FOTOS;
-            for (const f of toSeed) {
-              await setDoc(doc(db, 'mural_fotos', f.id), f).catch(() => {});
-            }
+            // Firestore collection is currently empty: Auto-restore initial photos!
+            await restoreAllInitialPhotos();
           }
         },
         (err) => {
-          console.debug('Firestore mural snapshot fallback local/offline:', err);
+          console.debug('Firestore fotos listener fallback offline:', err);
+        }
+      );
+
+      // Connect to Firestore for Lixeira / Recycle bin
+      const lixeiraCol = collection(db, 'mural_lixeira');
+      const qLixeira = query(lixeiraCol, orderBy('dataExclusao', 'desc'));
+
+      onSnapshot(
+        qLixeira,
+        (snapshot) => {
+          const remoteLixeira: FotoMuralLixeira[] = [];
+          snapshot.forEach((docItem) => {
+            remoteLixeira.push({ id: docItem.id, ...(docItem.data() as Omit<FotoMuralLixeira, 'id'>) });
+          });
+          cachedLixeira = remoteLixeira;
+          saveStoreToIndexedDB(IDB_STORE_LIXEIRA, cachedLixeira).catch(() => {});
+          saveLocalStorageSafe(STORAGE_KEY_LIXEIRA_CACHE, cachedLixeira);
+          notifyLixeiraSubscribers();
+        },
+        (err) => {
+          console.debug('Firestore lixeira listener fallback offline:', err);
         }
       );
     } catch (err) {
-      console.debug('Erro ao configurar listener do mural Firestore:', err);
+      console.debug('Erro ao configurar listeners do Firestore:', err);
     }
   }
 }
 
-// Auto-boot initializer
 if (typeof window !== 'undefined') {
   initMuralService();
 }
 
-// Synchronous getter for instant React state
+// Getters
 export function getMuralFotos(): FotoMural[] {
-  if (cachedFotos.length > 0) {
-    return cachedFotos;
-  }
-  const local = loadFromLocalStorage();
-  if (local.length > 0) {
-    cachedFotos = local;
-    return cachedFotos;
-  }
+  if (cachedFotos.length > 0) return cachedFotos;
   return INITIAL_MURAL_FOTOS;
 }
 
-// Subscribe to real-time changes
-export function subscribeMuralFotos(listener: (fotos: FotoMural[]) => void): () => void {
-  listeners.add(listener);
-  // Send current cached photos immediately
-  listener([...cachedFotos]);
+export function getLixeiraFotos(): FotoMuralLixeira[] {
+  return cachedLixeira;
+}
 
+// Subscriptions
+export function subscribeMuralFotos(listener: (fotos: FotoMural[]) => void): () => void {
+  fotosListeners.add(listener);
+  listener([...cachedFotos]);
   return () => {
-    listeners.delete(listener);
+    fotosListeners.delete(listener);
   };
 }
 
-// Add new photo with full Cloud Firestore + Local IndexedDB persistence
+export function subscribeLixeiraFotos(listener: (fotos: FotoMuralLixeira[]) => void): () => void {
+  lixeiraListeners.add(listener);
+  listener([...cachedLixeira]);
+  return () => {
+    lixeiraListeners.delete(listener);
+  };
+}
+
+// Add new photo
 export async function addFotoMural(
   fotoData: Omit<FotoMural, 'id' | 'curtidas' | 'dataCriacao'>
 ): Promise<FotoMural> {
@@ -225,27 +258,27 @@ export async function addFotoMural(
     dataCriacao: new Date().toISOString()
   };
 
-  // 1. Immediately update cache and local IndexedDB store
-  const updated = [novaFoto, ...cachedFotos];
-  updateMemoryAndLocalStores(updated);
+  cachedFotos = [novaFoto, ...cachedFotos];
+  saveStoreToIndexedDB(IDB_STORE_FOTOS, cachedFotos).catch(() => {});
+  saveLocalStorageSafe(STORAGE_KEY_MURAL_CACHE, cachedFotos);
+  notifyFotosSubscribers();
 
-  // 2. Persist to Cloud Firestore individual document
   if (db) {
     try {
       const docRef = doc(db, 'mural_fotos', novaFoto.id);
       await setDoc(docRef, novaFoto);
     } catch (err) {
-      console.warn('Erro ao salvar foto no Firestore, mantido em cache local seguro:', err);
+      console.warn('Erro ao salvar foto no Firestore:', err);
     }
   }
 
   return novaFoto;
 }
 
-// Like photo with atomic Firestore increment
+// Like photo
 export async function likeFotoMural(id: string): Promise<number> {
   let novoTotal = 0;
-  const updated = cachedFotos.map((f) => {
+  cachedFotos = cachedFotos.map((f) => {
     if (f.id === id) {
       novoTotal = (f.curtidas || 0) + 1;
       return { ...f, curtidas: novoTotal };
@@ -253,31 +286,154 @@ export async function likeFotoMural(id: string): Promise<number> {
     return f;
   });
 
-  updateMemoryAndLocalStores(updated);
+  saveStoreToIndexedDB(IDB_STORE_FOTOS, cachedFotos).catch(() => {});
+  saveLocalStorageSafe(STORAGE_KEY_MURAL_CACHE, cachedFotos);
+  notifyFotosSubscribers();
 
   if (db) {
     try {
       const docRef = doc(db, 'mural_fotos', id);
       await updateDoc(docRef, { curtidas: increment(1) });
     } catch (err) {
-      console.debug('Erro ao enviar curtida para o Firestore:', err);
+      console.debug('Erro ao registrar like:', err);
     }
   }
 
   return novoTotal;
 }
 
-// Delete photo from Firestore & Local Stores
-export async function deleteFotoMural(id: string): Promise<void> {
-  const updated = cachedFotos.filter((f) => f.id !== id);
-  updateMemoryAndLocalStores(updated);
+// SOFT DELETE: Move to mural_lixeira instead of permanent loss
+export async function deleteFotoMural(id: string): Promise<FotoMuralLixeira | null> {
+  const fotoParaExcluir = cachedFotos.find((f) => f.id === id);
+  if (!fotoParaExcluir) return null;
+
+  const itemLixeira: FotoMuralLixeira = {
+    ...fotoParaExcluir,
+    dataExclusao: new Date().toISOString()
+  };
+
+  // 1. Remove from active photos
+  cachedFotos = cachedFotos.filter((f) => f.id !== id);
+  saveStoreToIndexedDB(IDB_STORE_FOTOS, cachedFotos).catch(() => {});
+  saveLocalStorageSafe(STORAGE_KEY_MURAL_CACHE, cachedFotos);
+  notifyFotosSubscribers();
+
+  // 2. Add to lixeira
+  cachedLixeira = [itemLixeira, ...cachedLixeira];
+  saveStoreToIndexedDB(IDB_STORE_LIXEIRA, cachedLixeira).catch(() => {});
+  saveLocalStorageSafe(STORAGE_KEY_LIXEIRA_CACHE, cachedLixeira);
+  notifyLixeiraSubscribers();
+
+  // 3. Sync with Firestore
+  if (db) {
+    try {
+      // Add to mural_lixeira
+      await setDoc(doc(db, 'mural_lixeira', id), itemLixeira);
+      // Remove from mural_fotos
+      await deleteDoc(doc(db, 'mural_fotos', id));
+    } catch (err) {
+      console.warn('Erro ao mover foto para a lixeira no Firestore:', err);
+    }
+  }
+
+  return itemLixeira;
+}
+
+// RESTORE: Move back from lixeira to active mural
+export async function restoreFotoFromLixeira(id: string): Promise<FotoMural | null> {
+  const fotoParaRestaurar = cachedLixeira.find((f) => f.id === id);
+  if (!fotoParaRestaurar) return null;
+
+  const { dataExclusao, ...fotoAtiva } = fotoParaRestaurar;
+
+  // 1. Remove from lixeira
+  cachedLixeira = cachedLixeira.filter((f) => f.id !== id);
+  saveStoreToIndexedDB(IDB_STORE_LIXEIRA, cachedLixeira).catch(() => {});
+  saveLocalStorageSafe(STORAGE_KEY_LIXEIRA_CACHE, cachedLixeira);
+  notifyLixeiraSubscribers();
+
+  // 2. Add back to active photos
+  cachedFotos = [fotoAtiva, ...cachedFotos].sort(
+    (a, b) => new Date(b.dataCriacao).getTime() - new Date(a.dataCriacao).getTime()
+  );
+  saveStoreToIndexedDB(IDB_STORE_FOTOS, cachedFotos).catch(() => {});
+  saveLocalStorageSafe(STORAGE_KEY_MURAL_CACHE, cachedFotos);
+  notifyFotosSubscribers();
+
+  // 3. Sync with Firestore
+  if (db) {
+    try {
+      await setDoc(doc(db, 'mural_fotos', id), fotoAtiva);
+      await deleteDoc(doc(db, 'mural_lixeira', id));
+    } catch (err) {
+      console.warn('Erro ao restaurar foto no Firestore:', err);
+    }
+  }
+
+  return fotoAtiva;
+}
+
+// RECOVER ALL DELETED / INITIAL PHOTOS: Restores any missing fair photos
+export async function restoreAllInitialPhotos(): Promise<number> {
+  let restoredCount = 0;
+  const existingIds = new Set(cachedFotos.map((f) => f.id));
+
+  for (const foto of INITIAL_MURAL_FOTOS) {
+    if (!existingIds.has(foto.id)) {
+      cachedFotos = [foto, ...cachedFotos];
+      existingIds.add(foto.id);
+      restoredCount += 1;
+
+      if (db) {
+        try {
+          await setDoc(doc(db, 'mural_fotos', foto.id), foto);
+          // If it was in lixeira, remove from lixeira
+          await deleteDoc(doc(db, 'mural_lixeira', foto.id)).catch(() => {});
+        } catch {}
+      }
+    }
+  }
+
+  // Also remove from cached lixeira if any initial photos were in lixeira
+  cachedLixeira = cachedLixeira.filter((l) => !existingIds.has(l.id));
+
+  cachedFotos.sort((a, b) => new Date(b.dataCriacao).getTime() - new Date(a.dataCriacao).getTime());
+  saveStoreToIndexedDB(IDB_STORE_FOTOS, cachedFotos).catch(() => {});
+  saveLocalStorageSafe(STORAGE_KEY_MURAL_CACHE, cachedFotos);
+  saveStoreToIndexedDB(IDB_STORE_LIXEIRA, cachedLixeira).catch(() => {});
+  saveLocalStorageSafe(STORAGE_KEY_LIXEIRA_CACHE, cachedLixeira);
+
+  notifyFotosSubscribers();
+  notifyLixeiraSubscribers();
+
+  return restoredCount;
+}
+
+// Permanently delete from lixeira
+export async function permanentlyDeleteFromLixeira(id: string): Promise<void> {
+  cachedLixeira = cachedLixeira.filter((f) => f.id !== id);
+  saveStoreToIndexedDB(IDB_STORE_LIXEIRA, cachedLixeira).catch(() => {});
+  saveLocalStorageSafe(STORAGE_KEY_LIXEIRA_CACHE, cachedLixeira);
+  notifyLixeiraSubscribers();
 
   if (db) {
     try {
-      const docRef = doc(db, 'mural_fotos', id);
-      await deleteDoc(docRef);
-    } catch (err) {
-      console.warn('Erro ao deletar foto do Firestore:', err);
+      await deleteDoc(doc(db, 'mural_lixeira', id));
+    } catch {}
+  }
+}
+
+// Empty entire lixeira
+export async function emptyLixeira(): Promise<void> {
+  const ids = cachedLixeira.map((f) => f.id);
+  cachedLixeira = [];
+  saveStoreToIndexedDB(IDB_STORE_LIXEIRA, []).catch(() => {});
+  saveLocalStorageSafe(STORAGE_KEY_LIXEIRA_CACHE, []);
+  notifyLixeiraSubscribers();
+
+  if (db) {
+    for (const id of ids) {
+      await deleteDoc(doc(db, 'mural_lixeira', id)).catch(() => {});
     }
   }
 }

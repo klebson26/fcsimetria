@@ -571,10 +571,17 @@ export function getAllTrashItems(): { id: string; titulo: string; tipo: string; 
 // ==========================================
 export {
   getMuralFotos,
+  getLixeiraFotos,
   addFotoMural,
   likeFotoMural,
   deleteFotoMural,
-  subscribeMuralFotos
+  restoreFotoFromLixeira,
+  restoreAllInitialPhotos,
+  permanentlyDeleteFromLixeira,
+  emptyLixeira,
+  subscribeMuralFotos,
+  subscribeLixeiraFotos
 } from './muralService';
+export type { FotoMuralLixeira } from './muralService';
 
 export { KEYS };

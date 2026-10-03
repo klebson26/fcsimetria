@@ -1,10 +1,17 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
   getMuralFotos,
+  getLixeiraFotos,
   addFotoMural,
   likeFotoMural,
   deleteFotoMural,
+  restoreFotoFromLixeira,
+  restoreAllInitialPhotos,
+  permanentlyDeleteFromLixeira,
+  emptyLixeira,
   subscribeMuralFotos,
+  subscribeLixeiraFotos,
+  FotoMuralLixeira,
   getIdentidade,
   subscribeStorage,
   getAuthSession
@@ -95,6 +102,10 @@ export const MuralFotosPage: React.FC<MuralFotosPageProps> = ({
   onOpenQRCodeModal
 }) => {
   const [fotos, setFotos] = useState<FotoMural[]>(getMuralFotos());
+  const [lixeiraFotos, setLixeiraFotos] = useState<FotoMuralLixeira[]>(getLixeiraFotos());
+  const [isLixeiraOpen, setIsLixeiraOpen] = useState(false);
+  const [photoToDelete, setPhotoToDelete] = useState<FotoMural | null>(null);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [identidade, setIdentidade] = useState(getIdentidade());
   const [isCameraModalOpen, setIsCameraModalOpen] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -134,11 +145,15 @@ export const MuralFotosPage: React.FC<MuralFotosPageProps> = ({
     const unsubscribeMural = subscribeMuralFotos((latestFotos) => {
       setFotos(latestFotos);
     });
+    const unsubscribeLixeira = subscribeLixeiraFotos((deletedFotos) => {
+      setLixeiraFotos(deletedFotos);
+    });
     const unsubscribeStorage = subscribeStorage(() => {
       setIdentidade(getIdentidade());
     });
     return () => {
       unsubscribeMural();
+      unsubscribeLixeira();
       unsubscribeStorage();
     };
   }, []);
@@ -597,14 +612,37 @@ export const MuralFotosPage: React.FC<MuralFotosPageProps> = ({
     await likeFotoMural(id);
   };
 
-  const handleDelete = async (id: string, e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (confirm('Deseja realmente remover esta foto do mural?')) {
-      await deleteFotoMural(id);
-      if (selectedPhoto?.id === id) {
-        setSelectedPhoto(null);
-      }
+  const handleRequestDelete = (foto: FotoMural, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    playClickSound();
+    setPhotoToDelete(foto);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!photoToDelete) return;
+    playClickSound();
+    const id = photoToDelete.id;
+    await deleteFotoMural(id);
+    if (selectedPhoto?.id === id) {
+      setSelectedPhoto(null);
     }
+    setPhotoToDelete(null);
+    setToastMessage('Foto movida para a Lixeira do Mural. Você pode recuperá-la a qualquer momento!');
+    setTimeout(() => setToastMessage(null), 4500);
+  };
+
+  const handleRestorePhoto = async (id: string) => {
+    playClickSound();
+    await restoreFotoFromLixeira(id);
+    setToastMessage('Foto restaurada no Mural com sucesso!');
+    setTimeout(() => setToastMessage(null), 3500);
+  };
+
+  const handleRestoreAllInitial = async () => {
+    playClickSound();
+    const count = await restoreAllInitialPhotos();
+    setToastMessage(`${count} foto(s) recuperada(s) e restaurada(s) no Mural!`);
+    setTimeout(() => setToastMessage(null), 4000);
   };
 
   const handleCopyLink = () => {
@@ -676,6 +714,23 @@ export const MuralFotosPage: React.FC<MuralFotosPageProps> = ({
           </button>
 
           <div className="flex items-center gap-2">
+            <button
+              onClick={() => {
+                playClickSound();
+                setIsLixeiraOpen(true);
+              }}
+              title="Recuperar fotos excluídas do mural"
+              className="flex items-center gap-1.5 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-3 py-1.5 text-xs font-semibold text-emerald-400 hover:bg-emerald-500/20 transition shadow-sm"
+            >
+              <RotateCcw className="h-3.5 w-3.5 text-emerald-400" />
+              <span>Lixeira & Recuperar</span>
+              {lixeiraFotos.length > 0 && (
+                <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-emerald-500 px-1 text-[10px] font-bold text-slate-950">
+                  {lixeiraFotos.length}
+                </span>
+              )}
+            </button>
+
             <button
               onClick={handleOpenLiveCamera}
               className="flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 px-3.5 py-1.5 text-xs font-bold text-slate-950 shadow-md shadow-amber-500/20 hover:from-amber-400 hover:to-amber-500 transition"
@@ -885,7 +940,7 @@ export const MuralFotosPage: React.FC<MuralFotosPageProps> = ({
             <p className="text-xs text-slate-400 max-w-md mx-auto">
               Seja o primeiro a abrir a câmera, escolher seu cenário e tirar uma foto para o mural!
             </p>
-            <div className="flex justify-center gap-3">
+            <div className="flex flex-wrap justify-center gap-3">
               <button
                 onClick={handleOpenLiveCamera}
                 className="inline-flex items-center gap-2 rounded-xl bg-amber-500 px-5 py-2.5 text-xs font-bold text-slate-950 hover:bg-amber-400 transition"
@@ -899,6 +954,13 @@ export const MuralFotosPage: React.FC<MuralFotosPageProps> = ({
               >
                 <Smartphone className="h-4 w-4 text-amber-400" />
                 <span>Câmera do Celular</span>
+              </button>
+              <button
+                onClick={handleRestoreAllInitial}
+                className="inline-flex items-center gap-2 rounded-xl border border-emerald-500/40 bg-emerald-500/10 px-4 py-2.5 text-xs font-semibold text-emerald-400 hover:bg-emerald-500/20 transition"
+              >
+                <Sparkles className="h-4 w-4" />
+                <span>Restaurar Fotos da Feira</span>
               </button>
             </div>
           </div>
@@ -972,15 +1034,13 @@ export const MuralFotosPage: React.FC<MuralFotosPageProps> = ({
                       </span>
 
                       <div className="flex items-center gap-2">
-                        {session && (
-                          <button
-                            onClick={(e) => handleDelete(item.id, e)}
-                            title="Remover foto (Admin)"
-                            className="flex h-7 w-7 items-center justify-center rounded-lg border border-rose-500/30 bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 transition"
-                          >
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </button>
-                        )}
+                        <button
+                          onClick={(e) => handleRequestDelete(item, e)}
+                          title="Mover foto para a lixeira"
+                          className="flex h-7 w-7 items-center justify-center rounded-lg border border-slate-800 bg-slate-900 text-slate-400 hover:text-rose-400 hover:border-rose-500/40 hover:bg-rose-500/10 transition"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
 
                         <button
                           onClick={(e) => handleLike(item.id, e)}
@@ -1467,6 +1527,14 @@ export const MuralFotosPage: React.FC<MuralFotosPageProps> = ({
                     <Download className="h-4 w-4" />
                     <span className="hidden sm:inline">Baixar</span>
                   </a>
+
+                  <button
+                    onClick={() => handleRequestDelete(selectedPhoto)}
+                    className="flex items-center gap-1.5 rounded-xl border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-xs font-semibold text-rose-300 hover:bg-rose-500/20 transition"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                    <span className="hidden sm:inline">Excluir</span>
+                  </button>
                 </div>
               </div>
 
@@ -1475,6 +1543,233 @@ export const MuralFotosPage: React.FC<MuralFotosPageProps> = ({
               </p>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* ================= MODAL CONFIRMAÇÃO DE EXCLUSÃO ================= */}
+      {photoToDelete && (
+        <div
+          onClick={() => setPhotoToDelete(null)}
+          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-md p-4 animate-fade-in"
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="w-full max-w-md rounded-3xl border border-rose-500/30 bg-slate-900 p-6 shadow-2xl space-y-4"
+          >
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-rose-500/10 text-rose-400 border border-rose-500/30">
+                <Trash2 className="h-5 w-5" />
+              </div>
+              <div>
+                <h3 className="font-serif text-lg font-bold text-white">
+                  Excluir Foto do Mural?
+                </h3>
+                <p className="text-xs text-slate-400">
+                  Foto de <strong>{photoToDelete.autorNome}</strong>
+                </p>
+              </div>
+            </div>
+
+            <div className="rounded-2xl border border-slate-800 bg-slate-950 p-3 flex items-center gap-3">
+              <img
+                src={photoToDelete.fotoUrl}
+                alt={photoToDelete.autorNome}
+                className="h-16 w-14 object-cover rounded-xl border border-slate-800 shrink-0"
+              />
+              <div className="min-w-0 text-xs">
+                <span className="font-bold text-white block truncate">
+                  {photoToDelete.autorNome}
+                </span>
+                <span className="text-[11px] text-slate-400 block truncate">
+                  "{photoToDelete.mensagem}"
+                </span>
+                <span className="text-[10px] text-amber-400 font-mono block mt-1">
+                  📍 {photoToDelete.localFeira || 'Feira Cultural'}
+                </span>
+              </div>
+            </div>
+
+            <p className="text-xs text-slate-300 leading-relaxed">
+              Esta foto não será destruída permanentemente: ela será movida com segurança para a <strong>Lixeira do Mural</strong> e poderá ser restaurada a qualquer momento com apenas 1 clique.
+            </p>
+
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-800">
+              <button
+                type="button"
+                onClick={() => setPhotoToDelete(null)}
+                className="rounded-xl border border-slate-800 bg-slate-950 px-4 py-2 text-xs font-semibold text-slate-300 hover:text-white transition"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmDelete}
+                className="flex items-center gap-1.5 rounded-xl bg-rose-600 px-4 py-2 text-xs font-bold text-white shadow-lg shadow-rose-600/30 hover:bg-rose-500 transition"
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+                <span>Sim, Mover para Lixeira</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ================= MODAL LIXEIRA & RECUPERAÇÃO DE FOTOS ================= */}
+      {isLixeiraOpen && (
+        <div
+          onClick={() => setIsLixeiraOpen(false)}
+          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/85 backdrop-blur-md p-4 overflow-y-auto animate-fade-in"
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="relative w-full max-w-3xl rounded-3xl border border-slate-800 bg-slate-900 shadow-2xl overflow-hidden my-4 flex flex-col max-h-[90vh]"
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between border-b border-slate-800 px-6 py-4 bg-slate-900/90 shrink-0">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
+                  <RotateCcw className="h-5 w-5" />
+                </div>
+                <div>
+                  <h3 className="font-serif text-lg font-bold text-white flex items-center gap-2">
+                    Lixeira & Recuperação de Fotos
+                    <span className="rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 px-2 py-0.5 text-xs font-mono font-bold">
+                      {lixeiraFotos.length} na lixeira
+                    </span>
+                  </h3>
+                  <p className="text-xs text-slate-400">
+                    Restaure fotos removidas ou reative todas as fotos oficiais da feira
+                  </p>
+                </div>
+              </div>
+
+              <button
+                onClick={() => setIsLixeiraOpen(false)}
+                className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-950 border border-slate-800 text-slate-400 hover:text-white transition"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            {/* Quick action bar */}
+            <div className="bg-slate-950/60 border-b border-slate-800/80 px-6 py-3 flex flex-wrap items-center justify-between gap-3 shrink-0">
+              <span className="text-xs text-slate-400">
+                Fotos na lixeira são mantidas na nuvem para recuperação a qualquer momento.
+              </span>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={handleRestoreAllInitial}
+                  className="flex items-center gap-1.5 rounded-xl border border-amber-500/40 bg-amber-500/10 px-3.5 py-1.5 text-xs font-bold text-amber-300 hover:bg-amber-500/20 transition shadow-sm"
+                >
+                  <Sparkles className="h-3.5 w-3.5 text-amber-400" />
+                  <span>Restaurar Fotos Padrão da Feira</span>
+                </button>
+
+                {lixeiraFotos.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      if (confirm('Deseja esvaziar permanentemente toda a lixeira?')) {
+                        await emptyLixeira();
+                        setToastMessage('Lixeira esvaziada com sucesso.');
+                        setTimeout(() => setToastMessage(null), 3000);
+                      }
+                    }}
+                    className="flex items-center gap-1 rounded-xl border border-slate-800 bg-slate-900 px-3 py-1.5 text-xs font-medium text-slate-400 hover:text-rose-400 transition"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                    <span>Esvaziar</span>
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* List */}
+            <div className="p-6 overflow-y-auto space-y-3 flex-1">
+              {lixeiraFotos.length === 0 ? (
+                <div className="rounded-2xl border border-slate-800 bg-slate-950 p-8 text-center space-y-3">
+                  <div className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-slate-900 text-slate-500">
+                    <Trash2 className="h-6 w-6" />
+                  </div>
+                  <h4 className="font-serif text-base font-bold text-white">
+                    A Lixeira do Mural está Vazia
+                  </h4>
+                  <p className="text-xs text-slate-400 max-w-md mx-auto">
+                    Nenhuma foto foi removida recentemente. Caso deseje restabelecer todas as fotos fotográficas originais da feira, utilize o botão abaixo:
+                  </p>
+                  <button
+                    onClick={handleRestoreAllInitial}
+                    className="inline-flex items-center gap-2 rounded-xl bg-amber-500 px-4 py-2 text-xs font-bold text-slate-950 hover:bg-amber-400 transition"
+                  >
+                    <Sparkles className="h-3.5 w-3.5" />
+                    <span>Recuperar & Restaurar Fotos Iniciais</span>
+                  </button>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {lixeiraFotos.map((foto) => (
+                    <div
+                      key={foto.id}
+                      className="flex items-center justify-between gap-3 p-3 rounded-2xl border border-slate-800 bg-slate-950 text-xs hover:border-slate-700 transition"
+                    >
+                      <div className="flex items-center gap-3 min-w-0">
+                        <img
+                          src={foto.fotoUrl}
+                          alt={foto.autorNome}
+                          className="h-14 w-12 object-cover rounded-xl border border-slate-800 shrink-0"
+                        />
+                        <div className="min-w-0">
+                          <span className="font-bold text-white block truncate">
+                            {foto.autorNome}
+                          </span>
+                          <span className="text-[11px] text-slate-400 block truncate">
+                            "{foto.mensagem}"
+                          </span>
+                          <span className="text-[10px] text-slate-500 font-mono block mt-0.5">
+                            Excluída em: {formatData(foto.dataExclusao)}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="flex flex-col gap-1.5 shrink-0">
+                        <button
+                          type="button"
+                          onClick={() => handleRestorePhoto(foto.id)}
+                          className="flex items-center gap-1 rounded-xl bg-emerald-500/10 border border-emerald-500/30 px-2.5 py-1 text-xs font-bold text-emerald-400 hover:bg-emerald-500/20 transition"
+                        >
+                          <RotateCcw className="h-3 w-3" />
+                          <span>Restaurar</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => permanentlyDeleteFromLixeira(foto.id)}
+                          title="Excluir definitivamente"
+                          className="flex items-center justify-center rounded-lg p-1 text-[10px] text-slate-500 hover:text-rose-400 transition"
+                        >
+                          Definitivo
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ================= FLOATING TOAST NOTIFICATION ================= */}
+      {toastMessage && (
+        <div className="fixed bottom-6 right-6 z-50 flex items-center gap-3 rounded-2xl border border-emerald-500/30 bg-slate-900/95 px-4 py-3 text-xs font-semibold text-emerald-300 shadow-2xl backdrop-blur-md animate-fade-in">
+          <Check className="h-4 w-4 text-emerald-400 shrink-0" />
+          <span>{toastMessage}</span>
+          <button
+            onClick={() => setToastMessage(null)}
+            className="text-slate-400 hover:text-white ml-2"
+          >
+            <X className="h-3.5 w-3.5" />
+          </button>
         </div>
       )}
     </div>
